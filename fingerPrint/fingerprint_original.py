@@ -8,6 +8,7 @@ import threading
 import time, json, requests, socket
 import sys, os
 import pygame
+import fingerprint_mock
 
 from pyfingerprint.pyfingerprint import PyFingerprint
 
@@ -70,11 +71,12 @@ Std_DATA = {
 }
 
 pygame.mixer.init(16000, -16, 1, 2048)
-alarm = pygame.mixer.music.load("/home/pi/Desktop/alarm.mp3")
+alarm = pygame.mixer.music.load("/Users/kyumin/python-application/fingerPrint/alarm.mp3")
 
 # 지문인식기 연결
 try:
-    f = PyFingerprint('/dev/ttyAMA0', 57600, 0xFFFFFFFF, 0x00000000)
+    # f = PyFingerprint('/dev/ttyAMA0', 57600, 0xFFFFFFFF, 0x00000000)
+    f = fingerprint_mock.mock_object
     ## BaudRate, ## address , ## password
 except Exception as e:
     print('센서 정보를 확인할 수 없습니다!')
