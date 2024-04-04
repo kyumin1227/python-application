@@ -2,3 +2,6 @@ dictCrawling/JLPT/
 dictCrawling/venv
 
 fingerPrint/myenv
+fingerPrint/__pycache__
+
+error.txt
