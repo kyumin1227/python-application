@@ -18,6 +18,16 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import QTime, QDateTime, Qt
 from threading import Timer
 
+from pyfingerprint.pyfingerprint import PyFingerprint
+
+
+try:
+    f = PyFingerprint('/dev/ttyAMA0', 57600, 0xFFFFFFFF, 0x00000000)
+except Exception as e:
+    print("지문 인식기 연결 실패", e)
+    exit(1)
+else:
+    print("지문 인식기 연결 성공")
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
