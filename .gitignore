@@ -3,5 +3,6 @@ dictCrawling/venv
 
 fingerPrint/myenv
 fingerPrint/__pycache__
+fingerPrint/fingerPrint_kyumin/__pycache__
 
 error.txt
