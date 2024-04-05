@@ -15,6 +15,8 @@
 
 
 from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5.QtCore import QTime, QDateTime, Qt
+from threading import Timer
 
 
 class Ui_MainWindow(object):
@@ -342,14 +344,24 @@ class Ui_MainWindow(object):
         self.delete_pushButton_ok.setText(_translate("MainWindow", "확인"))
         self.delete_pushButton_text.setText(_translate("MainWindow", "학번을 입력해주세요\n"
 "\n" "2423002"))
+        self.showTime()
             
     # 페이지 전환 함수
     def changePage(self, pageIndex):
-         self.pages.setCurrentIndex(pageIndex)
-         self.buttons = [self.fingerprint_button, self.outing_button, self.new_fingerprint_button, self.delete_fingerprint_button]
-         for button in self.buttons:
+        self.pages.setCurrentIndex(pageIndex)
+        self.buttons = [self.fingerprint_button, self.outing_button, self.new_fingerprint_button, self.delete_fingerprint_button]
+        for button in self.buttons:
             button.setStyleSheet("background-color: rgb(78, 78, 78); color: rgb(227, 227, 227); border: 0px;")
-            self.buttons[pageIndex].setStyleSheet("background-color: gray; color: rgb(227, 227, 227); border: 0px;")
+        self.buttons[pageIndex].setStyleSheet("background-color: gray; color: rgb(227, 227, 227); border: 0px;")
+
+    def showTime(self):
+        current_date = QDateTime.currentDateTime()
+        current_date = current_date.toString('yyyy-MM-dd\thh:mm:ss')
+        self.fp_label_date.setText(current_date)
+        self.out_label_date.setText(current_date)
+
+        timer = Timer(1, self.showTime)
+        timer.start()
 
 
 if __name__ == "__main__":
