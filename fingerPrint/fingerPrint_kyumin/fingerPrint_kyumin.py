@@ -32,10 +32,12 @@ else:
 	print("지문 인식기 연결 성공")
 
 time.sleep(1)
+f.clearDatabase()
 
 class Ui_MainWindow(object):
 	def __init__(self):
-		self.function_running = False
+		self.action = ""
+		self.activate = False
 
 	def setupUi(self, MainWindow):
 		MainWindow.setObjectName("MainWindow")
@@ -308,7 +310,7 @@ class Ui_MainWindow(object):
 
 		self.retranslateUi(MainWindow)
 		QtCore.QMetaObject.connectSlotsByName(MainWindow)
-		self.set_action()
+		self.button_true()
 
 		# 세팅 완료 후 자동으로 출석 페이지 클릭
 		self.fingerprint_button.click()
@@ -363,9 +365,6 @@ class Ui_MainWindow(object):
 "\n" "2423002"))
 		self.showTime()
 
-	def set_action(self):
-		self.fp_pushButton_on.clicked.connect(lambda: self.run_scanner("d"))
-
     # 페이지 전환 함수
 	def changePage(self, pageIndex):
 		self.pages.setCurrentIndex(pageIndex)
@@ -383,23 +382,76 @@ class Ui_MainWindow(object):
 		timer = Timer(1, self.showTime)
 		timer.start()
 
-	def run_scanner(self, action):
-		if self.function_running:
-			print("함수가 실행중입니다.")
-			return
+	# 지문 로그를 보낼 버튼이 눌렀을 때 실행되는 함수
+	def log(self, action):
+		self.button_false()
 		
-		self.function_running = True
-		self.is_active = True
-		start_time = time.time()
+		self.activate = True
+		self.start_time = time.time()
+		self.action = action
 
-		while self.is_active and time.time() - start_time < 5:
+		while self.activate and time.time() - self.start_time < 3:
 			if f.readImage() != False:
-				self.is_active = False
+				f.convertImage(0x01)
+				print(f.searchTemplate())
+				
+				self.activate = False
+		
+		print(self.action)
 
-		print(f.downloadCharacteristics(0x01))
+		self.button_true()
 
-		self.function_running = False
+	# 지문 데이터를 수정할 버튼이 눌렀을 때 실행되는 함수
+	def data(self, action):
+		self.button_false()
 
+		self.activate = True
+		self.start_time = time.time()
+		self.action = action
+
+		while self.activate and time.time() - self.start_time < 3:
+			if f.readImage() != False:
+				f.convertImage(0x01)
+				
+				
+				self.activate = False
+		
+		self.activate = True
+
+		while self.activate and time.time() - self.start_time < 3:
+			if f.readImage() != False:
+				f.convertImage(0x02)
+				f.createTemplate()
+				index = f.storeTemplate()
+				print(index)
+				
+				self.activate = False
+		
+		print(self.action)
+
+		self.button_true()
+
+		
+
+	def button_false(self):
+		self.fp_pushButton_on.clicked.disconnect()
+		self.fp_pushButton_out.clicked.disconnect()
+		self.out_pushButton_gohan.clicked.disconnect()
+		self.out_pushButton_lib.clicked.disconnect()
+		self.out_pushButton_else.clicked.disconnect()
+		self.out_pushButton_return.clicked.disconnect()
+		self.new_pushButton_ok.clicked.disconnect()
+		self.delete_pushButton_ok.clicked.disconnect()
+
+	def button_true(self):
+		self.fp_pushButton_on.clicked.connect(lambda: self.log("on"))
+		self.fp_pushButton_out.clicked.connect(lambda: self.log("out"))
+		self.out_pushButton_gohan.clicked.connect(lambda: self.log("gohan"))
+		self.out_pushButton_lib.clicked.connect(lambda: self.log("lib"))
+		self.out_pushButton_else.clicked.connect(lambda: self.log("else"))
+		self.out_pushButton_return.clicked.connect(lambda: self.log("return"))
+		self.new_pushButton_ok.clicked.connect(lambda: self.data("ok"))
+		self.delete_pushButton_ok.clicked.connect(lambda: self.data("ok"))
 
 if __name__ == "__main__":
     import sys
