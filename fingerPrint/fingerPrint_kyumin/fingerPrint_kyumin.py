@@ -19,6 +19,7 @@ from PyQt5.QtCore import QTime, QDateTime, Qt, QThread
 from threading import Timer
 import time
 import threading
+import base64
 
 from pyfingerprint.pyfingerprint import PyFingerprint
 
@@ -413,7 +414,6 @@ class Ui_MainWindow(object):
 			if f.readImage() != False:
 				f.convertImage(0x01)
 				
-				
 				self.activate = False
 		
 		self.activate = True
@@ -424,6 +424,40 @@ class Ui_MainWindow(object):
 				f.createTemplate()
 				index = f.storeTemplate()
 				print(index)
+
+				self.data = f.downloadCharacteristics(0x01)
+
+				print(self.data)
+
+				print(type(self.data))
+
+				self.data = bytes(self.data)
+
+				print(self.data)
+
+				print(type(self.data))
+
+				self.data = base64.b64encode(self.data)
+				
+				print(self.data)
+
+				print(type(self.data))
+
+				self.data = base64.b64decode(self.data)
+
+				print(self.data)
+
+				print(type(self.data))
+
+				# f.uploadCharacteristics(0x01, self.data)
+
+				# f.createTemplate()
+
+				# f.storeTemplate()
+
+				# print(self.data)
+
+				# print(type(self.data))
 				
 				self.activate = False
 		
@@ -431,8 +465,7 @@ class Ui_MainWindow(object):
 
 		self.button_true()
 
-		
-
+	# 버튼 비활성화 함수
 	def button_false(self):
 		self.fp_pushButton_on.clicked.disconnect()
 		self.fp_pushButton_out.clicked.disconnect()
@@ -443,6 +476,7 @@ class Ui_MainWindow(object):
 		self.new_pushButton_ok.clicked.disconnect()
 		self.delete_pushButton_ok.clicked.disconnect()
 
+	# 버튼 활성화 함수
 	def button_true(self):
 		self.fp_pushButton_on.clicked.connect(lambda: self.log("on"))
 		self.fp_pushButton_out.clicked.connect(lambda: self.log("out"))
