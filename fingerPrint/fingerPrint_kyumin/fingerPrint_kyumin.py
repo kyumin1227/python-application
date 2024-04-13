@@ -35,10 +35,18 @@ else:
 time.sleep(1)
 f.clearDatabase()
 
+# 
+new_fingerprint_dic = {
+	"fingerprint": "",
+	"std_num": "",
+	"index": ""
+}
+
 class Ui_MainWindow(object):
 	def __init__(self):
 		self.action = ""
 		self.activate = False
+		self.stdNum = ""
 
 	def setupUi(self, MainWindow):
 		MainWindow.setObjectName("MainWindow")
@@ -297,15 +305,15 @@ class Ui_MainWindow(object):
 		self.delete_pushButton_ok.setStyleSheet("background-color: rgb(60, 60, 60);\n"
 "color: rgb(227, 227, 227); border: 0.5px solid rgb(70, 70, 70);")
 		self.delete_pushButton_ok.setObjectName("delete_pushButton_ok")
-		self.delete_pushButton_text = QtWidgets.QLabel(self.delete_fingerprint_page)
-		self.delete_pushButton_text.setGeometry(QtCore.QRect(40, 0, 521, 160))
-		self.delete_pushButton_text.setAutoFillBackground(False)
-		self.delete_pushButton_text.setStyleSheet("color: rgb(255, 255, 255);\n"
+		self.delete_label_text = QtWidgets.QLabel(self.delete_fingerprint_page)
+		self.delete_label_text.setGeometry(QtCore.QRect(40, 0, 521, 160))
+		self.delete_label_text.setAutoFillBackground(False)
+		self.delete_label_text.setStyleSheet("color: rgb(255, 255, 255);\n"
 "background-color: rgb(30, 30, 30);   \n"
 "border: 1px solid rgb(70, 70, 70);\n"
 "font-size: 35px;")
-		self.delete_pushButton_text.setAlignment(QtCore.Qt.AlignCenter)
-		self.delete_pushButton_text.setObjectName("delete_pushButton_text")
+		self.delete_label_text.setAlignment(QtCore.Qt.AlignCenter)
+		self.delete_label_text.setObjectName("delete_label_text")
 		self.pages.addWidget(self.delete_fingerprint_page)
 		MainWindow.setCentralWidget(self.centralwidget)
 
@@ -362,8 +370,10 @@ class Ui_MainWindow(object):
 		self.delete_pushButton_9.setText(_translate("MainWindow", "9"))
 		self.delete_pushButton_0.setText(_translate("MainWindow", "0"))
 		self.delete_pushButton_ok.setText(_translate("MainWindow", "확인"))
-		self.delete_pushButton_text.setText(_translate("MainWindow", "학번을 입력해주세요\n"
+		self.delete_label_text.setText(_translate("MainWindow", "학번을 입력해주세요\n"
 "\n" "2423002"))
+		
+		self.new_pushButton_0.clicked.connect(lambda: self.changeStdNum(0))
 		self.showTime()
 
     # 페이지 전환 함수
@@ -373,6 +383,12 @@ class Ui_MainWindow(object):
 		for button in self.buttons:
 			button.setStyleSheet("background-color: rgb(78, 78, 78); color: rgb(227, 227, 227); border: 0px;")
 		self.buttons[pageIndex].setStyleSheet("background-color: gray; color: rgb(227, 227, 227); border: 0px;")
+
+	# 학번 입력 함수
+	def changeStdNum(self, num):
+		self.stdNum += num
+		self.new_label_text.setText(self.stdNum)
+		self.delete_label_text.setText(self.stdNum)
 
 	def showTime(self):
 		current_date = QDateTime.currentDateTime()
