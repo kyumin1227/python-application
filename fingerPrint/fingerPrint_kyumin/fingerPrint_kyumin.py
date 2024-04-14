@@ -374,6 +374,28 @@ class Ui_MainWindow(object):
 "\n" "2423002"))
 		
 		self.new_pushButton_0.clicked.connect(lambda: self.changeStdNum(0))
+		self.new_pushButton_1.clicked.connect(lambda: self.changeStdNum(1))
+		self.new_pushButton_2.clicked.connect(lambda: self.changeStdNum(2))
+		self.new_pushButton_3.clicked.connect(lambda: self.changeStdNum(3))
+		self.new_pushButton_4.clicked.connect(lambda: self.changeStdNum(4))
+		self.new_pushButton_5.clicked.connect(lambda: self.changeStdNum(5))
+		self.new_pushButton_6.clicked.connect(lambda: self.changeStdNum(6))
+		self.new_pushButton_7.clicked.connect(lambda: self.changeStdNum(7))
+		self.new_pushButton_8.clicked.connect(lambda: self.changeStdNum(8))
+		self.new_pushButton_9.clicked.connect(lambda: self.changeStdNum(9))
+		self.new_pushButton_back.clicked.connect(lambda: self.changeStdNum("back"))
+
+		self.delete_pushButton_0.clicked.connect(lambda: self.changeStdNum(0))
+		self.delete_pushButton_1.clicked.connect(lambda: self.changeStdNum(1))
+		self.delete_pushButton_2.clicked.connect(lambda: self.changeStdNum(2))
+		self.delete_pushButton_3.clicked.connect(lambda: self.changeStdNum(3))
+		self.delete_pushButton_4.clicked.connect(lambda: self.changeStdNum(4))
+		self.delete_pushButton_5.clicked.connect(lambda: self.changeStdNum(5))
+		self.delete_pushButton_6.clicked.connect(lambda: self.changeStdNum(6))
+		self.delete_pushButton_7.clicked.connect(lambda: self.changeStdNum(7))
+		self.delete_pushButton_8.clicked.connect(lambda: self.changeStdNum(8))
+		self.delete_pushButton_9.clicked.connect(lambda: self.changeStdNum(9))
+		self.delete_pushButton_back.clicked.connect(lambda: self.changeStdNum("back"))
 		self.showTime()
 
     # 페이지 전환 함수
@@ -386,9 +408,19 @@ class Ui_MainWindow(object):
 
 	# 학번 입력 함수
 	def changeStdNum(self, num):
-		self.stdNum += num
+		if num == "back" and self.stdNum != "":
+			self.stdNum = self.stdNum[:-1]
+		elif num == "back" and self.stdNum == "":
+			pass
+		else:
+			self.stdNum += num
+
 		self.new_label_text.setText(self.stdNum)
 		self.delete_label_text.setText(self.stdNum)
+		
+		if self.stdNum == "":
+			self.new_label_text.setText("학번을 입력해주세요")
+			self.delete_label_text.setText("학번을 입력해주세요")
 
 	def showTime(self):
 		current_date = QDateTime.currentDateTime()
