@@ -408,6 +408,7 @@ class Ui_MainWindow(object):
 
 	# 학번 입력 함수
 	def changeStdNum(self, num):
+		num = str(num)
 		if num == "back" and self.stdNum != "":
 			self.stdNum = self.stdNum[:-1]
 		elif num == "back" and self.stdNum == "":
@@ -469,43 +470,43 @@ class Ui_MainWindow(object):
 		while self.activate and time.time() - self.start_time < 3:
 			if f.readImage() != False:
 				f.convertImage(0x02)
-				f.createTemplate()
-				index = f.storeTemplate()
-				print(index)
-
-				self.data = f.downloadCharacteristics(0x01)
-
-				print(self.data)
-
-				print(type(self.data))
-
-				self.data = bytes(self.data)
-
-				print(self.data)
-
-				print(type(self.data))
-
-				self.data = base64.b64encode(self.data)
-				
-				print(self.data)
-
-				print(type(self.data))
-
-				self.data = base64.b64decode(self.data)
-
-				print(self.data)
-
-				print(type(self.data))
-
-				# f.uploadCharacteristics(0x01, self.data)
-
 				# f.createTemplate()
 
-				# f.storeTemplate()
+				self.fpData = f.downloadCharacteristics(0x01)
 
-				# print(self.data)
+				print(self.fpData)
 
-				# print(type(self.data))
+				print(type(self.fpData))
+
+				self.fpData = bytes(self.fpData)
+
+				print(self.fpData)
+
+				print(type(self.fpData))
+
+				self.fpData = base64.b64encode(self.fpData)
+				
+				print(self.fpData)
+
+				print(type(self.fpData))
+
+				self.fpData = base64.b64decode(self.fpData)
+
+				print(self.fpData)
+
+				print(type(self.fpData))
+
+				f.uploadCharacteristics(0x01, self.fpData)
+
+				f.createTemplate()
+
+				index = f.storeTemplate()
+
+				print(index)
+
+				# print(self.fpData)
+
+				# print(type(self.fpData))
 				
 				self.activate = False
 		
