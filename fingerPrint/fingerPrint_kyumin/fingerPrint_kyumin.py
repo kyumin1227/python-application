@@ -20,8 +20,12 @@ from threading import Timer
 import time
 import threading
 import base64
+import requests
 
 from pyfingerprint.pyfingerprint import PyFingerprint
+
+# TODO	서버 주소
+SERVER_URL = ""	
 
 
 try:
@@ -35,9 +39,10 @@ else:
 time.sleep(1)
 f.clearDatabase()
 
-# 
+# 새로운 지문 정보 등록시 보낼 딕셔너리
 new_fingerprint_dic = {
-	"fingerprint": "",
+	"fingerprint1": "",
+	"fingerprint2": "",
 	"std_num": "",
 	"index": ""
 }
@@ -355,9 +360,7 @@ class Ui_MainWindow(object):
 		self.new_pushButton_9.setText(_translate("MainWindow", "9"))
 		self.new_pushButton_0.setText(_translate("MainWindow", "0"))
 		self.new_pushButton_ok.setText(_translate("MainWindow", "확인"))
-		self.new_label_text.setText(_translate("MainWindow", "학번을 입력해주세요\n"
-"\n"
-"2423002"))
+		self.new_label_text.setText(_translate("MainWindow", "학번을 입력해주세요"))
 		self.delete_pushButton_1.setText(_translate("MainWindow", "1"))
 		self.delete_pushButton_2.setText(_translate("MainWindow", "2"))
 		self.delete_pushButton_3.setText(_translate("MainWindow", "3"))
@@ -370,8 +373,7 @@ class Ui_MainWindow(object):
 		self.delete_pushButton_9.setText(_translate("MainWindow", "9"))
 		self.delete_pushButton_0.setText(_translate("MainWindow", "0"))
 		self.delete_pushButton_ok.setText(_translate("MainWindow", "확인"))
-		self.delete_label_text.setText(_translate("MainWindow", "학번을 입력해주세요\n"
-"\n" "2423002"))
+		self.delete_label_text.setText(_translate("MainWindow", "학번을 입력해주세요"))
 		
 		self.new_pushButton_0.clicked.connect(lambda: self.changeStdNum(0))
 		self.new_pushButton_1.clicked.connect(lambda: self.changeStdNum(1))
@@ -405,6 +407,11 @@ class Ui_MainWindow(object):
 		for button in self.buttons:
 			button.setStyleSheet("background-color: rgb(78, 78, 78); color: rgb(227, 227, 227); border: 0px;")
 		self.buttons[pageIndex].setStyleSheet("background-color: gray; color: rgb(227, 227, 227); border: 0px;")
+		
+		# 페이지 전환 시 학번 초기화
+		self.stdNum = ""
+		self.new_label_text.setText("학번을 입력해주세요")
+		self.delete_label_text.setText("학번을 입력해주세요")
 
 	# 학번 입력 함수
 	def changeStdNum(self, num):
@@ -452,67 +459,76 @@ class Ui_MainWindow(object):
 		self.button_true()
 
 	# 지문 데이터를 수정할 버튼이 눌렀을 때 실행되는 함수
+	# TODO 지문 삭제 기능 추가 필요
 	def data(self, action):
 		self.button_false()
 
-		self.activate = True
-		self.start_time = time.time()
-		self.action = action
+		# 이미 지문이 등록된 학번인지 체크
+		res = requests.get(SERVER_URL + "/fingerprint/student/" + self.stdNum)
 
-		while self.activate and time.time() - self.start_time < 3:
-			if f.readImage() != False:
-				f.convertImage(0x01)
-				
-				self.activate = False
+		# 등록 가능한 학번인 경우
+		if res.status_code == 204:
+
+			self.activate = True
+			self.start_time = time.time()
+			self.action = action
+
+			while self.activate and time.time() - self.start_time < 3:
+				if f.readImage() != False:
+					f.convertImage(0x01)
+					
+					self.activate = False
+			
+			self.activate = True
+
+			while self.activate and time.time() - self.start_time < 3:
+				if f.readImage() != False:
+					f.convertImage(0x02)
+					# f.createTemplate()
+
+					self.fpData1 = f.downloadCharacteristics(0x01)
+					self.fpData2 = f.downloadCharacteristics(0x02)
+
+					self.fpData1 = bytes(self.fpData1)
+					self.fpData2 = bytes(self.fpData2)
+
+					self.fpData1 = base64.b64encode(self.fpData1)
+					self.fpData2 = base64.b64encode(self.fpData2)
+
+					# TODO 지문 정보 백엔드로 전송 필요
+
+					self.fpData1 = base64.b64decode(self.fpData1)
+					self.fpData2 = base64.b64decode(self.fpData2)
+
+					f.uploadCharacteristics(0x01, self.fpData1)
+					f.uploadCharacteristics(0x02, self.fpData2)
+
+					f.createTemplate()
+
+					index = f.storeTemplate()
+
+					print(index)
+
+					# print(self.fpData)
+
+					# print(type(self.fpData))
+					
+					self.activate = False
+			
+			print(self.action)
+
+			self.button_true()
+			return
+
+		elif res.status_code == 200:
+			self.new_label_text.setText("이미 등록된 학번입니다.")
+			self.button_true()
+			return
 		
-		self.activate = True
-
-		while self.activate and time.time() - self.start_time < 3:
-			if f.readImage() != False:
-				f.convertImage(0x02)
-				# f.createTemplate()
-
-				self.fpData = f.downloadCharacteristics(0x01)
-
-				print(self.fpData)
-
-				print(type(self.fpData))
-
-				self.fpData = bytes(self.fpData)
-
-				print(self.fpData)
-
-				print(type(self.fpData))
-
-				self.fpData = base64.b64encode(self.fpData)
-				
-				print(self.fpData)
-
-				print(type(self.fpData))
-
-				self.fpData = base64.b64decode(self.fpData)
-
-				print(self.fpData)
-
-				print(type(self.fpData))
-
-				f.uploadCharacteristics(0x01, self.fpData)
-
-				f.createTemplate()
-
-				index = f.storeTemplate()
-
-				print(index)
-
-				# print(self.fpData)
-
-				# print(type(self.fpData))
-				
-				self.activate = False
-		
-		print(self.action)
-
-		self.button_true()
+		else:
+			self.new_label_text.setText("서버와의 연결에 문제가 있습니다.")
+			self.button_true()
+			return
 
 	# 버튼 비활성화 함수
 	def button_false(self):
@@ -524,6 +540,7 @@ class Ui_MainWindow(object):
 		self.out_pushButton_return.clicked.disconnect()
 		self.new_pushButton_ok.clicked.disconnect()
 		self.delete_pushButton_ok.clicked.disconnect()
+		print("버튼 비활성화")
 
 	# 버튼 활성화 함수
 	def button_true(self):
@@ -535,6 +552,7 @@ class Ui_MainWindow(object):
 		self.out_pushButton_return.clicked.connect(lambda: self.log("return"))
 		self.new_pushButton_ok.clicked.connect(lambda: self.data("ok"))
 		self.delete_pushButton_ok.clicked.connect(lambda: self.data("ok"))
+		print("버튼 활성화")
 
 if __name__ == "__main__":
     import sys
