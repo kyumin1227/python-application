@@ -27,9 +27,13 @@ import os, json
 
 from pyfingerprint.pyfingerprint import PyFingerprint
 
-PASSWORD = os.getenv("FP_PASSWORD")	# 암호화 시 사용하는 비밀번호
+PASSWORD = os.getenv("FP_PASSWORD").encode("utf-8")	# 암호화 시 사용하는 비밀번호
 SERVER_URL = os.getenv("FP_URL")	# 서버 주소
 SERVER_KEY = os.getenv("FP_KEY")	# 서버에 전달하는 키
+
+print(PASSWORD)
+print(SERVER_URL)
+print(SERVER_KEY)
 
 try:
 	f = PyFingerprint('/dev/ttyAMA0', 57600, 0xFFFFFFFF, 0x00000000)
@@ -48,6 +52,10 @@ new_fingerprint_dic = {
 	"fingerprint2": "",
 	"std_num": "",
 	"salt": ""
+}
+
+headers = {
+	'Content-Type': 'application/json'
 }
 
 class Ui_MainWindow(object):
@@ -465,9 +473,12 @@ class Ui_MainWindow(object):
 	# TODO 지문 삭제 기능 추가 필요
 	def data(self, action):
 		self.button_false()
+		print("data")
 
 		# 이미 지문이 등록된 학번인지 체크
-		res = requests.get(SERVER_URL + "/fingerprint/student/" + self.stdNum)
+		res = requests.get(SERVER_URL + "/fingerprint/students/" + self.stdNum)
+
+		print(res.json())
 
 		# 등록 가능한 학번인 경우
 		if res.json()["success"]:
@@ -494,6 +505,9 @@ class Ui_MainWindow(object):
 					self.fpData1 = f.downloadCharacteristics(0x01)
 					self.fpData2 = f.downloadCharacteristics(0x02)
 
+					self.fpData1 = bytes(self.fpData1)
+					self.fpData2 = bytes(self.fpData2)
+
 					self.fpData1 = self.encrypt(self.fpData1, key)
 					self.fpData2 = self.encrypt(self.fpData2, key)
 
@@ -503,15 +517,14 @@ class Ui_MainWindow(object):
 					self.fpData1 = self.fpData1.decode("utf-8")
 					self.fpData2 = self.fpData2.decode("utf-8")
 
+					salt = base64.b64encode(salt)
+					salt = salt.decode("utf-8")
+
 					# TODO 지문 정보 백엔드로 전송 필요
 					new_fingerprint_dic["fingerprint1"] = self.fpData1
 					new_fingerprint_dic["fingerprint2"] = self.fpData2
 					new_fingerprint_dic["std_num"] = self.stdNum
 					new_fingerprint_dic["salt"] = salt
-
-					headers = {
-						'Content-Type': 'application/json'
-					}
 
 					res = requests.post(f"{SERVER_URL}/fingerprint/students", data= json.dumps(new_fingerprint_dic), headers=headers)
 
@@ -576,7 +589,7 @@ class Ui_MainWindow(object):
 
 	
 	# 키 생성 함수
-	def generate_key(password, salt):
+	def generate_key(self, password, salt):
 		kdf = PBKDF2HMAC(
 			algorithm=hashes.SHA256(),
 			length=32,
@@ -587,7 +600,7 @@ class Ui_MainWindow(object):
 		return kdf.derive(password)
 	
 	# 암호화 함수
-	def encrypt(data, key):
+	def encrypt(self, data, key):
 		iv = os.urandom(16)  # 초기화 벡터 생성
 		cipher = Cipher(algorithms.AES(key), modes.CFB(iv), backend=default_backend())
 		encryptor = cipher.encryptor()
@@ -595,7 +608,7 @@ class Ui_MainWindow(object):
 		return iv + encrypted_data  # IV와 암호화된 데이터를 함께 반환
 	
 	# 복호화 함수
-	def decrypt(encrypted_data, key):
+	def decrypt(self, encrypted_data, key):
 		iv = encrypted_data[:16]  # IV 추출
 		encrypted_data = encrypted_data[16:]  # 실제 암호화된 데이터
 		cipher = Cipher(algorithms.AES(key), modes.CFB(iv), backend=default_backend())
