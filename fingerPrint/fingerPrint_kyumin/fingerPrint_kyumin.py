@@ -13,20 +13,23 @@
 # new_fingerPrint(지문 등록): new
 # delete_fingerPrint(지문 삭제): delete
 
-
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.backends import default_backend
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import QTime, QDateTime, Qt, QThread
 from threading import Timer
 import time
-import threading
 import base64
 import requests
+import os, json
 
 from pyfingerprint.pyfingerprint import PyFingerprint
 
-# TODO	서버 주소
-SERVER_URL = ""	
-
+PASSWORD = os.getenv("FP_PASSWORD")	# 암호화 시 사용하는 비밀번호
+SERVER_URL = os.getenv("FP_URL")	# 서버 주소
+SERVER_KEY = os.getenv("FP_KEY")	# 서버에 전달하는 키
 
 try:
 	f = PyFingerprint('/dev/ttyAMA0', 57600, 0xFFFFFFFF, 0x00000000)
@@ -44,7 +47,7 @@ new_fingerprint_dic = {
 	"fingerprint1": "",
 	"fingerprint2": "",
 	"std_num": "",
-	"index": ""
+	"salt": ""
 }
 
 class Ui_MainWindow(object):
@@ -467,7 +470,7 @@ class Ui_MainWindow(object):
 		res = requests.get(SERVER_URL + "/fingerprint/student/" + self.stdNum)
 
 		# 등록 가능한 학번인 경우
-		if res.status_code == 204:
+		if res.json()["success"]:
 
 			self.activate = True
 			self.start_time = time.time()
@@ -484,18 +487,35 @@ class Ui_MainWindow(object):
 			while self.activate and time.time() - self.start_time < 3:
 				if f.readImage() != False:
 					f.convertImage(0x02)
-					# f.createTemplate()
+
+					salt = os.urandom(16)
+					key = self.generate_key(PASSWORD, salt)
 
 					self.fpData1 = f.downloadCharacteristics(0x01)
 					self.fpData2 = f.downloadCharacteristics(0x02)
 
-					self.fpData1 = bytes(self.fpData1)
-					self.fpData2 = bytes(self.fpData2)
+					self.fpData1 = self.encrypt(self.fpData1, key)
+					self.fpData2 = self.encrypt(self.fpData2, key)
 
 					self.fpData1 = base64.b64encode(self.fpData1)
 					self.fpData2 = base64.b64encode(self.fpData2)
 
+					self.fpData1 = self.fpData1.decode("utf-8")
+					self.fpData2 = self.fpData2.decode("utf-8")
+
 					# TODO 지문 정보 백엔드로 전송 필요
+					new_fingerprint_dic["fingerprint1"] = self.fpData1
+					new_fingerprint_dic["fingerprint2"] = self.fpData2
+					new_fingerprint_dic["std_num"] = self.stdNum
+					new_fingerprint_dic["salt"] = salt
+
+					headers = {
+						'Content-Type': 'application/json'
+					}
+
+					res = requests.post(f"{SERVER_URL}/fingerprint/students", data= json.dumps(new_fingerprint_dic), headers=headers)
+
+					print(res.json())
 
 					self.fpData1 = base64.b64decode(self.fpData1)
 					self.fpData2 = base64.b64decode(self.fpData2)
@@ -520,8 +540,8 @@ class Ui_MainWindow(object):
 			self.button_true()
 			return
 
-		elif res.status_code == 200:
-			self.new_label_text.setText("이미 등록된 학번입니다.")
+		elif res.json()["success"] == False:
+			self.new_label_text.setText(res.json()["message"])	# 가입 되지 않은 학번입니다.
 			self.button_true()
 			return
 		
@@ -553,6 +573,34 @@ class Ui_MainWindow(object):
 		self.new_pushButton_ok.clicked.connect(lambda: self.data("ok"))
 		self.delete_pushButton_ok.clicked.connect(lambda: self.data("ok"))
 		print("버튼 활성화")
+
+	
+	# 키 생성 함수
+	def generate_key(password, salt):
+		kdf = PBKDF2HMAC(
+			algorithm=hashes.SHA256(),
+			length=32,
+			salt=salt,
+			iterations=100000,
+			backend=default_backend()
+		)
+		return kdf.derive(password)
+	
+	# 암호화 함수
+	def encrypt(data, key):
+		iv = os.urandom(16)  # 초기화 벡터 생성
+		cipher = Cipher(algorithms.AES(key), modes.CFB(iv), backend=default_backend())
+		encryptor = cipher.encryptor()
+		encrypted_data = encryptor.update(data) + encryptor.finalize()
+		return iv + encrypted_data  # IV와 암호화된 데이터를 함께 반환
+	
+	# 복호화 함수
+	def decrypt(encrypted_data, key):
+		iv = encrypted_data[:16]  # IV 추출
+		encrypted_data = encrypted_data[16:]  # 실제 암호화된 데이터
+		cipher = Cipher(algorithms.AES(key), modes.CFB(iv), backend=default_backend())
+		decryptor = cipher.decryptor()
+		return decryptor.update(encrypted_data) + decryptor.finalize()
 
 if __name__ == "__main__":
     import sys
