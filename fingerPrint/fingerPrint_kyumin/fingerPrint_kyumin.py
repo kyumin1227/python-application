@@ -30,10 +30,72 @@ from pyfingerprint.pyfingerprint import PyFingerprint
 PASSWORD = os.getenv("FP_PASSWORD").encode("utf-8")	# 암호화 시 사용하는 비밀번호
 SERVER_URL = os.getenv("FP_URL")	# 서버 주소
 SERVER_KEY = os.getenv("FP_KEY")	# 서버에 전달하는 키
+STUDENT_LIST = []	# 지문 데이터의 인덱스 별로 학번 저장
 
 print(PASSWORD)
 print(SERVER_URL)
 print(SERVER_KEY)
+
+# 키 생성 함수
+def generate_key(password, salt):
+	kdf = PBKDF2HMAC(
+		algorithm=hashes.SHA256(),
+		length=32,
+		salt=salt,
+		iterations=100000,
+		backend=default_backend()
+	)
+	return kdf.derive(password)
+
+# 암호화 함수
+def encrypt(data, key):
+	iv = os.urandom(16)  # 초기화 벡터 생성
+	cipher = Cipher(algorithms.AES(key), modes.CFB(iv), backend=default_backend())
+	encryptor = cipher.encryptor()
+	encrypted_data = encryptor.update(data) + encryptor.finalize()
+	return iv + encrypted_data  # IV와 암호화된 데이터를 함께 반환
+
+# 복호화 함수
+def decrypt(encrypted_data, key):
+	iv = encrypted_data[:16]  # IV 추출
+	encrypted_data = encrypted_data[16:]  # 실제 암호화된 데이터
+	cipher = Cipher(algorithms.AES(key), modes.CFB(iv), backend=default_backend())
+	decryptor = cipher.decryptor()
+	return decryptor.update(encrypted_data) + decryptor.finalize()
+
+# 데이터 베이스에서 지문 데이터를 가져와 지문 인식기에 저장
+def getFingerList():
+	res = requests.get(SERVER_URL + "/fingerprint/students")
+	jsonData = res.json()
+	dataList = jsonData["data"]
+	for data in dataList:
+
+		fpData1 = data["fingerPrintImage1"]
+		fpData2 = data["fingerPrintImage2"]
+		salt = data["salt"]
+
+		fpData1 = fpData1.encode("utf-8")
+		fpData2 = fpData2.encode("utf-8")
+		salt = salt.encode("utf-8")
+
+		fpData1 = base64.b64decode(fpData1)
+		fpData2 = base64.b64decode(fpData2)
+		salt = base64.b64decode(salt)
+
+		key = generate_key(PASSWORD, salt)
+
+		fpData1 = decrypt(fpData1, key)
+		fpData2 = decrypt(fpData2, key)
+
+		fpData1 = list(fpData1)
+		fpData2 = list(fpData2)
+
+		f.uploadCharacteristics(0x01, fpData1)
+		f.uploadCharacteristics(0x02, fpData2)
+		f.createTemplate()
+		f.storeTemplate()
+
+		STUDENT_LIST.append(data["studentNumber"])
 
 try:
 	f = PyFingerprint('/dev/ttyAMA0', 57600, 0xFFFFFFFF, 0x00000000)
@@ -45,6 +107,7 @@ else:
 
 time.sleep(1)
 f.clearDatabase()
+getFingerList()
 
 # 새로운 지문 정보 등록시 보낼 딕셔너리
 new_fingerprint_dic = {
@@ -52,6 +115,11 @@ new_fingerprint_dic = {
 	"fingerprint2": "",
 	"std_num": "",
 	"salt": ""
+}
+
+log_dic = {
+	"std_num": "",
+	"action": ""
 }
 
 headers = {
@@ -458,14 +526,29 @@ class Ui_MainWindow(object):
 		self.start_time = time.time()
 		self.action = action
 
-		while self.activate and time.time() - self.start_time < 3:
+		self.result = (-1, 0)
+
+		while self.activate and time.time() - self.start_time < 5:
 			if f.readImage() != False:
 				f.convertImage(0x01)
-				print(f.searchTemplate())
+
+				self.result = f.searchTemplate()
 				
 				self.activate = False
+
+		if self.result[0] != -1 and self.result[1] >= 65:
+			log_dic["std_num"] = STUDENT_LIST[self.result[0]]
+			log_dic["action"] = self.action
+			
+			res = requests.post(SERVER_URL + "/fingerprint/logs", data=json.dumps(log_dic), headers=headers)
+
+			print(res.json())
+			self.fp_label_text.setText("지문을 인식해 주세요")
+			self.out_label_text.setText("지문을 인식해 주세요")
 		
-		print(self.action)
+		else:
+			self.fp_label_text.setText("지문 인식에 실패했습니다. \n다시 시도해주세요.")
+			self.out_label_text.setText("지문 인식에 실패했습니다. \n다시 시도해주세요.")
 
 		self.button_true()
 
@@ -487,7 +570,7 @@ class Ui_MainWindow(object):
 			self.start_time = time.time()
 			self.action = action
 
-			while self.activate and time.time() - self.start_time < 3:
+			while self.activate and time.time() - self.start_time < 5:
 				if f.readImage() != False:
 					f.convertImage(0x01)
 					
@@ -495,12 +578,12 @@ class Ui_MainWindow(object):
 			
 			self.activate = True
 
-			while self.activate and time.time() - self.start_time < 3:
+			while self.activate and time.time() - self.start_time < 5:
 				if f.readImage() != False:
 					f.convertImage(0x02)
 
 					salt = os.urandom(16)
-					key = self.generate_key(PASSWORD, salt)
+					key = generate_key(PASSWORD, salt)
 
 					self.fpData1 = f.downloadCharacteristics(0x01)
 					self.fpData2 = f.downloadCharacteristics(0x02)
@@ -508,8 +591,8 @@ class Ui_MainWindow(object):
 					self.fpData1 = bytes(self.fpData1)
 					self.fpData2 = bytes(self.fpData2)
 
-					self.fpData1 = self.encrypt(self.fpData1, key)
-					self.fpData2 = self.encrypt(self.fpData2, key)
+					self.fpData1 = encrypt(self.fpData1, key)
+					self.fpData2 = encrypt(self.fpData2, key)
 
 					self.fpData1 = base64.b64encode(self.fpData1)
 					self.fpData2 = base64.b64encode(self.fpData2)
@@ -520,7 +603,7 @@ class Ui_MainWindow(object):
 					salt = base64.b64encode(salt)
 					salt = salt.decode("utf-8")
 
-					# TODO 지문 정보 백엔드로 전송 필요
+					# 지문 정보 백엔드로 전송
 					new_fingerprint_dic["fingerprint1"] = self.fpData1
 					new_fingerprint_dic["fingerprint2"] = self.fpData2
 					new_fingerprint_dic["std_num"] = self.stdNum
@@ -528,23 +611,37 @@ class Ui_MainWindow(object):
 
 					res = requests.post(f"{SERVER_URL}/fingerprint/students", data= json.dumps(new_fingerprint_dic), headers=headers)
 
-					print(res.json())
+					# 저장된 지문 정보 받아와서 저장
+					jsonData = res.json()["data"]
+
+					self.fpData1 = jsonData["fingerPrintImage1"]
+					self.fpData2 = jsonData["fingerPrintImage2"]
+					salt = jsonData["salt"]
+
+					self.fpData1 = self.fpData1.encode("utf-8")
+					self.fpData2 = self.fpData2.encode("utf-8")
+					salt = salt.encode("utf-8")
 
 					self.fpData1 = base64.b64decode(self.fpData1)
 					self.fpData2 = base64.b64decode(self.fpData2)
+					salt = base64.b64decode(salt)
+
+					key = generate_key(PASSWORD, salt)
+
+					self.fpData1 = decrypt(self.fpData1, key)
+					self.fpData2 = decrypt(self.fpData2, key)
+
+					self.fpData1 = list(self.fpData1)
+					self.fpData2 = list(self.fpData2)
 
 					f.uploadCharacteristics(0x01, self.fpData1)
 					f.uploadCharacteristics(0x02, self.fpData2)
 
 					f.createTemplate()
 
-					index = f.storeTemplate()
+					f.storeTemplate()
 
-					print(index)
-
-					# print(self.fpData)
-
-					# print(type(self.fpData))
+					STUDENT_LIST.append(self.stdNum)
 					
 					self.activate = False
 			
@@ -577,43 +674,18 @@ class Ui_MainWindow(object):
 
 	# 버튼 활성화 함수
 	def button_true(self):
-		self.fp_pushButton_on.clicked.connect(lambda: self.log("on"))
-		self.fp_pushButton_out.clicked.connect(lambda: self.log("out"))
-		self.out_pushButton_gohan.clicked.connect(lambda: self.log("gohan"))
-		self.out_pushButton_lib.clicked.connect(lambda: self.log("lib"))
-		self.out_pushButton_else.clicked.connect(lambda: self.log("else"))
-		self.out_pushButton_return.clicked.connect(lambda: self.log("return"))
+		self.fp_pushButton_on.clicked.connect(lambda: self.log("등교"))
+		self.fp_pushButton_out.clicked.connect(lambda: self.log("하교"))
+		self.out_pushButton_gohan.clicked.connect(lambda: self.log("식사"))
+		self.out_pushButton_lib.clicked.connect(lambda: self.log("도서관"))
+		self.out_pushButton_else.clicked.connect(lambda: self.log("기타"))
+		self.out_pushButton_return.clicked.connect(lambda: self.log("복귀"))
 		self.new_pushButton_ok.clicked.connect(lambda: self.data("ok"))
-		self.delete_pushButton_ok.clicked.connect(lambda: self.data("ok"))
+		self.delete_pushButton_ok.clicked.connect(lambda: self.data("del"))
 		print("버튼 활성화")
 
 	
-	# 키 생성 함수
-	def generate_key(self, password, salt):
-		kdf = PBKDF2HMAC(
-			algorithm=hashes.SHA256(),
-			length=32,
-			salt=salt,
-			iterations=100000,
-			backend=default_backend()
-		)
-		return kdf.derive(password)
 	
-	# 암호화 함수
-	def encrypt(self, data, key):
-		iv = os.urandom(16)  # 초기화 벡터 생성
-		cipher = Cipher(algorithms.AES(key), modes.CFB(iv), backend=default_backend())
-		encryptor = cipher.encryptor()
-		encrypted_data = encryptor.update(data) + encryptor.finalize()
-		return iv + encrypted_data  # IV와 암호화된 데이터를 함께 반환
-	
-	# 복호화 함수
-	def decrypt(self, encrypted_data, key):
-		iv = encrypted_data[:16]  # IV 추출
-		encrypted_data = encrypted_data[16:]  # 실제 암호화된 데이터
-		cipher = Cipher(algorithms.AES(key), modes.CFB(iv), backend=default_backend())
-		decryptor = cipher.decryptor()
-		return decryptor.update(encrypted_data) + decryptor.finalize()
 
 if __name__ == "__main__":
     import sys
