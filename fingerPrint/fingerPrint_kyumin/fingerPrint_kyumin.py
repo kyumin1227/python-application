@@ -489,8 +489,8 @@ class Ui_MainWindow(object):
 		
 		# 페이지 전환 시 학번 초기화
 		self.stdNum = ""
-		self.new_label_text.setText("학번을 입력해주세요")
-		self.delete_label_text.setText("학번을 입력해주세요")
+		self.clear_label_text()
+		
 
 	# 학번 입력 함수
 	def changeStdNum(self, num):
@@ -542,29 +542,50 @@ class Ui_MainWindow(object):
 			
 			res = requests.post(SERVER_URL + "/fingerprint/logs", data=json.dumps(log_dic), headers=headers)
 
-			print(res.json())
-			self.fp_label_text.setText("지문을 인식해 주세요")
-			self.out_label_text.setText("지문을 인식해 주세요")
+			if res.status_code == 200:
+				self.fp_label_text.setText(f"로그가 등록되었습니다. ({action})")
+				self.out_label_text.setText(f"로그가 등록되었습니다. ({action})")
+			else:
+				self.fp_label_text.setText("서버와의 연결에 문제가 발생하였습니다.")
+				self.out_label_text.setText(f"로그가 등록되었습니다. ({action})")
 		
 		else:
-			self.fp_label_text.setText("지문 인식에 실패했습니다. \n다시 시도해주세요.")
-			self.out_label_text.setText("지문 인식에 실패했습니다. \n다시 시도해주세요.")
+			self.fp_label_text.setText("지문 인식에 실패하였습니다. \n다시 시도해주세요.")
+			self.out_label_text.setText("지문 인식에 실패하였습니다. \n다시 시도해주세요.")
 
 		self.button_true()
+		timer = Timer(3, self.clear_label_text)
+		timer.start()
 
 	# 지문 데이터를 수정할 버튼이 눌렀을 때 실행되는 함수
-	# TODO 지문 삭제 기능 추가 필요
 	def data(self, action):
 		self.button_false()
-		print("data")
+
+		if self.stdNum == "":
+			self.new_label_text.setText("학번을 입력해 주세요")
+			self.delete_label_text.setText("학번을 입력해 주세요")
+			self.button_true()
+			timer = Timer(3, self.clear_label_text)
+			timer.start()
+			return
 
 		# 이미 지문이 등록된 학번인지 체크
 		res = requests.get(SERVER_URL + "/fingerprint/students/" + self.stdNum)
 
-		print(res.json())
+		print(res)
 
-		# 등록 가능한 학번인 경우
-		if res.json()["success"]:
+		# 가입 되지 않은 학번의 경우
+		if res.status_code == 204:
+			self.new_label_text.setText("가입되지 않은 학번입니다.")
+			self.delete_label_text.setText("가입되지 않은 학번입니다.")
+			self.button_true()
+			self.stdNum = ""
+			timer = Timer(3, self.clear_label_text)
+			timer.start()
+			return
+
+		# 지문 등록
+		if res.json()["success"] and action == "create":
 
 			self.activate = True
 			self.start_time = time.time()
@@ -644,21 +665,59 @@ class Ui_MainWindow(object):
 					STUDENT_LIST.append(self.stdNum)
 					
 					self.activate = False
-			
-			print(self.action)
 
-			self.button_true()
-			return
+					if res.status_code == 200:
+						self.new_label_text.setText(res.json()["message"])
+					else:
+						self.new_label_text.setText("서버와의 연결에 문제가 발생하였습니다.")
+		
+		# 지문 삭제
+		elif not res.json()["success"] and action == "delete":
+		
+			self.activate = True
+			self.start_time = time.time()
 
-		elif res.json()["success"] == False:
+			self.result = (-1, 0)
+
+			while self.activate and time.time() - self.start_time < 5:
+				if f.readImage() != False:
+					f.convertImage(0x01)
+
+					self.result = f.searchTemplate()
+					
+					self.activate = False
+
+			if self.result[0] != -1 and self.result[1] >= 65:
+				self.del_stdNum = STUDENT_LIST[self.result[0]]
+
+				if self.del_stdNum == self.stdNum:
+					res = requests.delete(SERVER_URL + "/fingerprint/students/" + self.stdNum)
+
+					if res.json()["success"]:
+						STUDENT_LIST.remove(self.stdNum)
+						self.delete_label_text.setText("지문 삭제에 성공하였습니다.")
+					elif not res.json()["success"]:
+						self.delete_label_text.setText("지문 삭제에 실패하였습니다. \n다시 시도해주세요.")
+					else:
+						self.delete_label_text.setText("서버와의 연결에 문제가 발생하였습니다.")
+				else:
+					self.delete_label_text.setText("지문 삭제에 실패하였습니다. \n다시 시도해주세요.")
+			else:
+				self.delete_label_text.setText("지문 삭제에 실패하였습니다. \n다시 시도해주세요.")
+
+		elif res.json()["success"] and action == "delete":
+			self.delete_label_text.setText("삭제 할 지문 데이터가 없습니다.")
+
+		elif not res.json()["success"]:
 			self.new_label_text.setText(res.json()["message"])	# 가입 되지 않은 학번입니다.
-			self.button_true()
-			return
 		
 		else:
-			self.new_label_text.setText("서버와의 연결에 문제가 있습니다.")
-			self.button_true()
-			return
+			self.new_label_text.setText("서버와의 연결에 문제가 발생하였습니다.")
+			
+		self.button_true()
+		self.stdNum = ""
+		timer = Timer(3, self.clear_label_text)
+		timer.start()
 
 	# 버튼 비활성화 함수
 	def button_false(self):
@@ -680,11 +739,16 @@ class Ui_MainWindow(object):
 		self.out_pushButton_lib.clicked.connect(lambda: self.log("도서관"))
 		self.out_pushButton_else.clicked.connect(lambda: self.log("기타"))
 		self.out_pushButton_return.clicked.connect(lambda: self.log("복귀"))
-		self.new_pushButton_ok.clicked.connect(lambda: self.data("ok"))
-		self.delete_pushButton_ok.clicked.connect(lambda: self.data("del"))
+		self.new_pushButton_ok.clicked.connect(lambda: self.data("create"))
+		self.delete_pushButton_ok.clicked.connect(lambda: self.data("delete"))
 		print("버튼 활성화")
 
-	
+	# 라벨 초기화 함수
+	def clear_label_text(self):
+		self.new_label_text.setText("학번을 입력해 주세요")
+		self.delete_label_text.setText("학번을 입력해 주세요")
+		self.fp_label_text.setText("지문을 인식해 주세요")
+		self.out_label_text.setText("지문을 인식해 주세요")
 	
 
 if __name__ == "__main__":
