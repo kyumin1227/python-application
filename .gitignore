@@ -5,4 +5,8 @@ fingerPrint/myenv
 fingerPrint/__pycache__
 fingerPrint/fingerPrint_kyumin/__pycache__
 
+carNumber/.venv
+
+carDetection/.venv
+
 error.txt
