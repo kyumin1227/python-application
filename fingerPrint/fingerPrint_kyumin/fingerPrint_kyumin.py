@@ -13,20 +13,89 @@
 # new_fingerPrint(지문 등록): new
 # delete_fingerPrint(지문 삭제): delete
 
-
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.backends import default_backend
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import QTime, QDateTime, Qt, QThread
 from threading import Timer
 import time
-import threading
 import base64
 import requests
+import os, json
 
 from pyfingerprint.pyfingerprint import PyFingerprint
 
-# TODO	서버 주소
-SERVER_URL = ""	
+PASSWORD = os.getenv("FP_PASSWORD").encode("utf-8")	# 암호화 시 사용하는 비밀번호
+SERVER_URL = os.getenv("FP_URL")	# 서버 주소
+SERVER_KEY = os.getenv("FP_KEY")	# 서버에 전달하는 키
+STUDENT_LIST = []	# 지문 데이터의 인덱스 별로 학번 저장
 
+print(PASSWORD)
+print(SERVER_URL)
+print(SERVER_KEY)
+
+# 키 생성 함수
+def generate_key(password, salt):
+	kdf = PBKDF2HMAC(
+		algorithm=hashes.SHA256(),
+		length=32,
+		salt=salt,
+		iterations=100000,
+		backend=default_backend()
+	)
+	return kdf.derive(password)
+
+# 암호화 함수
+def encrypt(data, key):
+	iv = os.urandom(16)  # 초기화 벡터 생성
+	cipher = Cipher(algorithms.AES(key), modes.CFB(iv), backend=default_backend())
+	encryptor = cipher.encryptor()
+	encrypted_data = encryptor.update(data) + encryptor.finalize()
+	return iv + encrypted_data  # IV와 암호화된 데이터를 함께 반환
+
+# 복호화 함수
+def decrypt(encrypted_data, key):
+	iv = encrypted_data[:16]  # IV 추출
+	encrypted_data = encrypted_data[16:]  # 실제 암호화된 데이터
+	cipher = Cipher(algorithms.AES(key), modes.CFB(iv), backend=default_backend())
+	decryptor = cipher.decryptor()
+	return decryptor.update(encrypted_data) + decryptor.finalize()
+
+# 데이터 베이스에서 지문 데이터를 가져와 지문 인식기에 저장
+def getFingerList():
+	res = requests.get(SERVER_URL + "/fingerprint/students")
+	jsonData = res.json()
+	dataList = jsonData["data"]
+	for data in dataList:
+
+		fpData1 = data["fingerPrintImage1"]
+		fpData2 = data["fingerPrintImage2"]
+		salt = data["salt"]
+
+		fpData1 = fpData1.encode("utf-8")
+		fpData2 = fpData2.encode("utf-8")
+		salt = salt.encode("utf-8")
+
+		fpData1 = base64.b64decode(fpData1)
+		fpData2 = base64.b64decode(fpData2)
+		salt = base64.b64decode(salt)
+
+		key = generate_key(PASSWORD, salt)
+
+		fpData1 = decrypt(fpData1, key)
+		fpData2 = decrypt(fpData2, key)
+
+		fpData1 = list(fpData1)
+		fpData2 = list(fpData2)
+
+		f.uploadCharacteristics(0x01, fpData1)
+		f.uploadCharacteristics(0x02, fpData2)
+		f.createTemplate()
+		f.storeTemplate()
+
+		STUDENT_LIST.append(data["studentNumber"])
 
 try:
 	f = PyFingerprint('/dev/ttyAMA0', 57600, 0xFFFFFFFF, 0x00000000)
@@ -38,13 +107,23 @@ else:
 
 time.sleep(1)
 f.clearDatabase()
+getFingerList()
 
 # 새로운 지문 정보 등록시 보낼 딕셔너리
 new_fingerprint_dic = {
 	"fingerprint1": "",
 	"fingerprint2": "",
 	"std_num": "",
-	"index": ""
+	"salt": ""
+}
+
+log_dic = {
+	"std_num": "",
+	"action": ""
+}
+
+headers = {
+	'Content-Type': 'application/json'
 }
 
 class Ui_MainWindow(object):
@@ -410,8 +489,8 @@ class Ui_MainWindow(object):
 		
 		# 페이지 전환 시 학번 초기화
 		self.stdNum = ""
-		self.new_label_text.setText("학번을 입력해주세요")
-		self.delete_label_text.setText("학번을 입력해주세요")
+		self.clear_label_text()
+		
 
 	# 학번 입력 함수
 	def changeStdNum(self, num):
@@ -447,33 +526,72 @@ class Ui_MainWindow(object):
 		self.start_time = time.time()
 		self.action = action
 
-		while self.activate and time.time() - self.start_time < 3:
+		self.result = (-1, 0)
+
+		while self.activate and time.time() - self.start_time < 5:
 			if f.readImage() != False:
 				f.convertImage(0x01)
-				print(f.searchTemplate())
+
+				self.result = f.searchTemplate()
 				
 				self.activate = False
+
+		if self.result[0] != -1 and self.result[1] >= 65:
+			log_dic["std_num"] = STUDENT_LIST[self.result[0]]
+			log_dic["action"] = self.action
+			
+			res = requests.post(SERVER_URL + "/fingerprint/logs", data=json.dumps(log_dic), headers=headers)
+
+			if res.status_code == 200:
+				self.fp_label_text.setText(f"로그가 등록되었습니다. ({action})")
+				self.out_label_text.setText(f"로그가 등록되었습니다. ({action})")
+			else:
+				self.fp_label_text.setText("서버와의 연결에 문제가 발생하였습니다.")
+				self.out_label_text.setText(f"로그가 등록되었습니다. ({action})")
 		
-		print(self.action)
+		else:
+			self.fp_label_text.setText("지문 인식에 실패하였습니다. \n다시 시도해주세요.")
+			self.out_label_text.setText("지문 인식에 실패하였습니다. \n다시 시도해주세요.")
 
 		self.button_true()
+		timer = Timer(3, self.clear_label_text)
+		timer.start()
 
 	# 지문 데이터를 수정할 버튼이 눌렀을 때 실행되는 함수
-	# TODO 지문 삭제 기능 추가 필요
 	def data(self, action):
 		self.button_false()
 
-		# 이미 지문이 등록된 학번인지 체크
-		res = requests.get(SERVER_URL + "/fingerprint/student/" + self.stdNum)
+		if self.stdNum == "":
+			self.new_label_text.setText("학번을 입력해 주세요")
+			self.delete_label_text.setText("학번을 입력해 주세요")
+			self.button_true()
+			timer = Timer(3, self.clear_label_text)
+			timer.start()
+			return
 
-		# 등록 가능한 학번인 경우
+		# 이미 지문이 등록된 학번인지 체크
+		res = requests.get(SERVER_URL + "/fingerprint/students/" + self.stdNum)
+
+		print(res)
+
+		# 가입 되지 않은 학번의 경우
 		if res.status_code == 204:
+			self.new_label_text.setText("가입되지 않은 학번입니다.")
+			self.delete_label_text.setText("가입되지 않은 학번입니다.")
+			self.button_true()
+			self.stdNum = ""
+			timer = Timer(3, self.clear_label_text)
+			timer.start()
+			return
+
+		# 지문 등록
+		if res.json()["success"] and action == "create":
 
 			self.activate = True
 			self.start_time = time.time()
 			self.action = action
 
-			while self.activate and time.time() - self.start_time < 3:
+			while self.activate and time.time() - self.start_time < 5:
 				if f.readImage() != False:
 					f.convertImage(0x01)
 					
@@ -481,10 +599,12 @@ class Ui_MainWindow(object):
 			
 			self.activate = True
 
-			while self.activate and time.time() - self.start_time < 3:
+			while self.activate and time.time() - self.start_time < 5:
 				if f.readImage() != False:
 					f.convertImage(0x02)
-					# f.createTemplate()
+
+					salt = os.urandom(16)
+					key = generate_key(PASSWORD, salt)
 
 					self.fpData1 = f.downloadCharacteristics(0x01)
 					self.fpData2 = f.downloadCharacteristics(0x02)
@@ -492,43 +612,112 @@ class Ui_MainWindow(object):
 					self.fpData1 = bytes(self.fpData1)
 					self.fpData2 = bytes(self.fpData2)
 
+					self.fpData1 = encrypt(self.fpData1, key)
+					self.fpData2 = encrypt(self.fpData2, key)
+
 					self.fpData1 = base64.b64encode(self.fpData1)
 					self.fpData2 = base64.b64encode(self.fpData2)
 
-					# TODO 지문 정보 백엔드로 전송 필요
+					self.fpData1 = self.fpData1.decode("utf-8")
+					self.fpData2 = self.fpData2.decode("utf-8")
+
+					salt = base64.b64encode(salt)
+					salt = salt.decode("utf-8")
+
+					# 지문 정보 백엔드로 전송
+					new_fingerprint_dic["fingerprint1"] = self.fpData1
+					new_fingerprint_dic["fingerprint2"] = self.fpData2
+					new_fingerprint_dic["std_num"] = self.stdNum
+					new_fingerprint_dic["salt"] = salt
+
+					res = requests.post(f"{SERVER_URL}/fingerprint/students", data= json.dumps(new_fingerprint_dic), headers=headers)
+
+					# 저장된 지문 정보 받아와서 저장
+					jsonData = res.json()["data"]
+
+					self.fpData1 = jsonData["fingerPrintImage1"]
+					self.fpData2 = jsonData["fingerPrintImage2"]
+					salt = jsonData["salt"]
+
+					self.fpData1 = self.fpData1.encode("utf-8")
+					self.fpData2 = self.fpData2.encode("utf-8")
+					salt = salt.encode("utf-8")
 
 					self.fpData1 = base64.b64decode(self.fpData1)
 					self.fpData2 = base64.b64decode(self.fpData2)
+					salt = base64.b64decode(salt)
+
+					key = generate_key(PASSWORD, salt)
+
+					self.fpData1 = decrypt(self.fpData1, key)
+					self.fpData2 = decrypt(self.fpData2, key)
+
+					self.fpData1 = list(self.fpData1)
+					self.fpData2 = list(self.fpData2)
 
 					f.uploadCharacteristics(0x01, self.fpData1)
 					f.uploadCharacteristics(0x02, self.fpData2)
 
 					f.createTemplate()
 
-					index = f.storeTemplate()
+					f.storeTemplate()
 
-					print(index)
-
-					# print(self.fpData)
-
-					# print(type(self.fpData))
+					STUDENT_LIST.append(self.stdNum)
 					
 					self.activate = False
-			
-			print(self.action)
 
-			self.button_true()
-			return
+					if res.status_code == 200:
+						self.new_label_text.setText(res.json()["message"])
+					else:
+						self.new_label_text.setText("서버와의 연결에 문제가 발생하였습니다.")
+		
+		# 지문 삭제
+		elif not res.json()["success"] and action == "delete":
+		
+			self.activate = True
+			self.start_time = time.time()
 
-		elif res.status_code == 200:
-			self.new_label_text.setText("이미 등록된 학번입니다.")
-			self.button_true()
-			return
+			self.result = (-1, 0)
+
+			while self.activate and time.time() - self.start_time < 5:
+				if f.readImage() != False:
+					f.convertImage(0x01)
+
+					self.result = f.searchTemplate()
+					
+					self.activate = False
+
+			if self.result[0] != -1 and self.result[1] >= 65:
+				self.del_stdNum = STUDENT_LIST[self.result[0]]
+
+				if self.del_stdNum == self.stdNum:
+					res = requests.delete(SERVER_URL + "/fingerprint/students/" + self.stdNum)
+
+					if res.json()["success"]:
+						STUDENT_LIST.remove(self.stdNum)
+						self.delete_label_text.setText("지문 삭제에 성공하였습니다.")
+					elif not res.json()["success"]:
+						self.delete_label_text.setText("지문 삭제에 실패하였습니다. \n다시 시도해주세요.")
+					else:
+						self.delete_label_text.setText("서버와의 연결에 문제가 발생하였습니다.")
+				else:
+					self.delete_label_text.setText("지문 삭제에 실패하였습니다. \n다시 시도해주세요.")
+			else:
+				self.delete_label_text.setText("지문 삭제에 실패하였습니다. \n다시 시도해주세요.")
+
+		elif res.json()["success"] and action == "delete":
+			self.delete_label_text.setText("삭제 할 지문 데이터가 없습니다.")
+
+		elif not res.json()["success"]:
+			self.new_label_text.setText(res.json()["message"])	# 가입 되지 않은 학번입니다.
 		
 		else:
-			self.new_label_text.setText("서버와의 연결에 문제가 있습니다.")
-			self.button_true()
-			return
+			self.new_label_text.setText("서버와의 연결에 문제가 발생하였습니다.")
+			
+		self.button_true()
+		self.stdNum = ""
+		timer = Timer(3, self.clear_label_text)
+		timer.start()
 
 	# 버튼 비활성화 함수
 	def button_false(self):
@@ -544,15 +733,23 @@ class Ui_MainWindow(object):
 
 	# 버튼 활성화 함수
 	def button_true(self):
-		self.fp_pushButton_on.clicked.connect(lambda: self.log("on"))
-		self.fp_pushButton_out.clicked.connect(lambda: self.log("out"))
-		self.out_pushButton_gohan.clicked.connect(lambda: self.log("gohan"))
-		self.out_pushButton_lib.clicked.connect(lambda: self.log("lib"))
-		self.out_pushButton_else.clicked.connect(lambda: self.log("else"))
-		self.out_pushButton_return.clicked.connect(lambda: self.log("return"))
-		self.new_pushButton_ok.clicked.connect(lambda: self.data("ok"))
-		self.delete_pushButton_ok.clicked.connect(lambda: self.data("ok"))
+		self.fp_pushButton_on.clicked.connect(lambda: self.log("등교"))
+		self.fp_pushButton_out.clicked.connect(lambda: self.log("하교"))
+		self.out_pushButton_gohan.clicked.connect(lambda: self.log("식사"))
+		self.out_pushButton_lib.clicked.connect(lambda: self.log("도서관"))
+		self.out_pushButton_else.clicked.connect(lambda: self.log("기타"))
+		self.out_pushButton_return.clicked.connect(lambda: self.log("복귀"))
+		self.new_pushButton_ok.clicked.connect(lambda: self.data("create"))
+		self.delete_pushButton_ok.clicked.connect(lambda: self.data("delete"))
 		print("버튼 활성화")
+
+	# 라벨 초기화 함수
+	def clear_label_text(self):
+		self.new_label_text.setText("학번을 입력해 주세요")
+		self.delete_label_text.setText("학번을 입력해 주세요")
+		self.fp_label_text.setText("지문을 인식해 주세요")
+		self.out_label_text.setText("지문을 인식해 주세요")
+	
 
 if __name__ == "__main__":
     import sys
