@@ -4,7 +4,7 @@ from ultralytics import YOLO
 model = YOLO('yolov8m.pt')  # YOLOv8 small 모델 사용, 필요에 따라 'yolov8m.pt', 'yolov8l.pt', 'yolov8x.pt' 등 사용
 
 # 데이터셋 경로
-data = './Detect_car.v3i.yolov5pytorch/data.yaml'  # dataset.yaml 파일의 경로
+data = '/Users/kyumin/python-application/carDetection/dataset/Detect_car_v4i_yolov8/data.yaml'  # dataset.yaml 파일의 경로
 
 # 학습
 model.train(data=data, epochs=50, imgsz=640, batch=16, name='yolov8-custom', project='YOLOv8')
