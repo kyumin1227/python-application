@@ -8,5 +8,15 @@ fingerPrint/fingerPrint_kyumin/__pycache__
 carNumber/.venv
 
 carDetection/.venv
+carDetection/dataset
+carDetection/PCS-model
+carDetection/test
+carDetection/YOLOv8
+carDetection/YOLOv8_car_model
+
+shpFile/shpVenv
 
 error.txt
+
+*.pt
+.DS_Store
