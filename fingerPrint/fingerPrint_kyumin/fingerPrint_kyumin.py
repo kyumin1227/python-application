@@ -543,8 +543,8 @@ class Ui_MainWindow(object):
 			res = requests.post(SERVER_URL + "/fingerprint/logs", data=json.dumps(log_dic), headers=headers)
 
 			if res.status_code == 200:
-				self.fp_label_text.setText(f"로그가 등록되었습니다. ({action})")
-				self.out_label_text.setText(f"로그가 등록되었습니다. ({action})")
+				self.fp_label_text.setText(res["message"])
+				self.out_label_text.setText(res["message"])
 			else:
 				self.fp_label_text.setText("서버와의 연결에 문제가 발생하였습니다.")
 				self.out_label_text.setText(f"로그가 등록되었습니다. ({action})")
@@ -757,5 +757,5 @@ if __name__ == "__main__":
     MainWindow = QtWidgets.QMainWindow()
     ui = Ui_MainWindow()
     ui.setupUi(MainWindow)
-    MainWindow.show()
+    MainWindow.showFullScreen()
     sys.exit(app.exec_())
