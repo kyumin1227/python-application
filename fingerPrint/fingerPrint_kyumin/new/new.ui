@@ -29,6 +29,11 @@
       <height>95</height>
      </rect>
     </property>
+    <property name="font">
+     <font>
+      <pointsize>18</pointsize>
+     </font>
+    </property>
     <property name="styleSheet">
      <string notr="true">background-color: rgb(78, 78, 78);
 color: rgb(227, 227, 227);</string>
@@ -45,6 +50,11 @@ color: rgb(227, 227, 227);</string>
       <width>120</width>
       <height>95</height>
      </rect>
+    </property>
+    <property name="font">
+     <font>
+      <pointsize>18</pointsize>
+     </font>
     </property>
     <property name="styleSheet">
      <string notr="true">background-color: rgb(78, 78, 78);
@@ -63,6 +73,11 @@ color: rgb(227, 227, 227);</string>
       <height>95</height>
      </rect>
     </property>
+    <property name="font">
+     <font>
+      <pointsize>18</pointsize>
+     </font>
+    </property>
     <property name="styleSheet">
      <string notr="true">background-color: rgb(78, 78, 78);
 color: rgb(227, 227, 227);</string>
@@ -79,6 +94,11 @@ color: rgb(227, 227, 227);</string>
       <width>120</width>
       <height>95</height>
      </rect>
+    </property>
+    <property name="font">
+     <font>
+      <pointsize>18</pointsize>
+     </font>
     </property>
     <property name="styleSheet">
      <string notr="true">background-color: rgb(78, 78, 78);
@@ -185,6 +205,11 @@ font-size: 25px;</string>
         <height>121</height>
        </rect>
       </property>
+      <property name="font">
+       <font>
+        <pointsize>18</pointsize>
+       </font>
+      </property>
       <property name="styleSheet">
        <string notr="true">background-color: rgb(60, 60, 60);
 color: rgb(227, 227, 227);</string>
@@ -201,6 +226,11 @@ color: rgb(227, 227, 227);</string>
         <width>121</width>
         <height>121</height>
        </rect>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>18</pointsize>
+       </font>
       </property>
       <property name="styleSheet">
        <string notr="true">background-color: rgb(60, 60, 60);
@@ -293,6 +323,11 @@ font-size: 25px;</string>
         <height>57</height>
        </rect>
       </property>
+      <property name="font">
+       <font>
+        <pointsize>18</pointsize>
+       </font>
+      </property>
       <property name="styleSheet">
        <string notr="true">background-color: rgb(60, 60, 60);
 color: rgb(227, 227, 227);</string>
@@ -309,6 +344,11 @@ color: rgb(227, 227, 227);</string>
         <width>121</width>
         <height>57</height>
        </rect>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>18</pointsize>
+       </font>
       </property>
       <property name="styleSheet">
        <string notr="true">background-color: rgb(60, 60, 60);
@@ -327,6 +367,11 @@ color: rgb(227, 227, 227);</string>
         <height>57</height>
        </rect>
       </property>
+      <property name="font">
+       <font>
+        <pointsize>18</pointsize>
+       </font>
+      </property>
       <property name="styleSheet">
        <string notr="true">background-color: rgb(60, 60, 60);
 color: rgb(227, 227, 227);</string>
@@ -343,6 +388,11 @@ color: rgb(227, 227, 227);</string>
         <width>121</width>
         <height>57</height>
        </rect>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>18</pointsize>
+       </font>
       </property>
       <property name="styleSheet">
        <string notr="true">background-color: rgb(60, 60, 60);
@@ -363,6 +413,11 @@ color: rgb(227, 227, 227);</string>
         <height>100</height>
        </rect>
       </property>
+      <property name="font">
+       <font>
+        <pointsize>24</pointsize>
+       </font>
+      </property>
       <property name="styleSheet">
        <string notr="true">background-color: rgb(50, 50, 50);
 color: rgb(227, 227, 227);</string>
@@ -379,6 +434,11 @@ color: rgb(227, 227, 227);</string>
         <width>100</width>
         <height>100</height>
        </rect>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>24</pointsize>
+       </font>
       </property>
       <property name="styleSheet">
        <string notr="true">background-color: rgb(50, 50, 50);
@@ -397,6 +457,11 @@ color: rgb(227, 227, 227);</string>
         <height>100</height>
        </rect>
       </property>
+      <property name="font">
+       <font>
+        <pointsize>24</pointsize>
+       </font>
+      </property>
       <property name="styleSheet">
        <string notr="true">background-color: rgb(50, 50, 50);
 color: rgb(227, 227, 227);</string>
@@ -413,6 +478,11 @@ color: rgb(227, 227, 227);</string>
         <width>100</width>
         <height>100</height>
        </rect>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>24</pointsize>
+       </font>
       </property>
       <property name="styleSheet">
        <string notr="true">background-color: rgb(50, 50, 50);
@@ -431,6 +501,11 @@ color: rgb(227, 227, 227);</string>
         <height>100</height>
        </rect>
       </property>
+      <property name="font">
+       <font>
+        <pointsize>24</pointsize>
+       </font>
+      </property>
       <property name="styleSheet">
        <string notr="true">background-color: rgb(50, 50, 50);
 color: rgb(227, 227, 227);</string>
@@ -447,6 +522,11 @@ color: rgb(227, 227, 227);</string>
         <width>100</width>
         <height>100</height>
        </rect>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>24</pointsize>
+       </font>
       </property>
       <property name="styleSheet">
        <string notr="true">background-color: rgb(50, 50, 50);
@@ -465,6 +545,11 @@ color: rgb(227, 227, 227);</string>
         <height>100</height>
        </rect>
       </property>
+      <property name="font">
+       <font>
+        <pointsize>24</pointsize>
+       </font>
+      </property>
       <property name="styleSheet">
        <string notr="true">background-color: rgb(50, 50, 50);
 color: rgb(227, 227, 227);</string>
@@ -481,6 +566,11 @@ color: rgb(227, 227, 227);</string>
         <width>100</width>
         <height>100</height>
        </rect>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>24</pointsize>
+       </font>
       </property>
       <property name="styleSheet">
        <string notr="true">background-color: rgb(50, 50, 50);
@@ -499,6 +589,11 @@ color: rgb(227, 227, 227);</string>
         <height>100</height>
        </rect>
       </property>
+      <property name="font">
+       <font>
+        <pointsize>24</pointsize>
+       </font>
+      </property>
       <property name="styleSheet">
        <string notr="true">background-color: rgb(50, 50, 50);
 color: rgb(227, 227, 227);</string>
@@ -515,6 +610,11 @@ color: rgb(227, 227, 227);</string>
         <width>100</width>
         <height>100</height>
        </rect>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>24</pointsize>
+       </font>
       </property>
       <property name="styleSheet">
        <string notr="true">background-color: rgb(50, 50, 50);
@@ -533,6 +633,11 @@ color: rgb(227, 227, 227);</string>
         <height>100</height>
        </rect>
       </property>
+      <property name="font">
+       <font>
+        <pointsize>24</pointsize>
+       </font>
+      </property>
       <property name="styleSheet">
        <string notr="true">background-color: rgb(50, 50, 50);
 color: rgb(227, 227, 227);</string>
@@ -549,6 +654,11 @@ color: rgb(227, 227, 227);</string>
         <width>100</width>
         <height>100</height>
        </rect>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>24</pointsize>
+       </font>
       </property>
       <property name="styleSheet">
        <string notr="true">background-color: rgb(50, 50, 50);

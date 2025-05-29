@@ -2,6 +2,7 @@ from enum import Enum
 
 # 상태 정의
 class Status(Enum):
+	WAITING_STUDENT_ID = "학번입력대기"
 	REGISTER = "등록"
 	ATTENDANCE = "등교"
 	LEAVE = "하교"
@@ -15,7 +16,8 @@ class Status(Enum):
 CONFIG = {
 	'use_mock': False,
 	'status': Status.ATTENDANCE,  # 기본 상태는 등교
-	'sensor_active': False  # 지문 인식기 활성화 상태
+	'sensor_active': False,  # 지문 인식기 활성화 상태
+	'student_id': ""  # 현재 입력된 학번
 }
 
 def get_status() -> Status:
@@ -30,11 +32,22 @@ def get_status() -> Status:
 def set_status(new_status: Status) -> None:
 	"""
 	애플리케이션의 상태를 변경합니다.
+	WAITING_STUDENT_ID 상태일 때는 센서를 비활성화하고,
+	다른 상태일 때는 센서를 활성화합니다.
 	
 	Args:
 		new_status (Status): 변경할 새로운 상태
 	"""
 	CONFIG["status"] = new_status
+	
+	# 상태에 따라 센서 활성화 상태 자동 변경
+	if new_status == Status.WAITING_STUDENT_ID:
+		set_sensor_active(False)
+	elif new_status == Status.REGISTER:
+		set_sensor_active(True)
+	else:
+		set_sensor_active(True)
+		clear_student_id()
 
 def is_mock() -> bool:
 	"""
@@ -70,4 +83,28 @@ def set_sensor_active(active: bool) -> None:
 	Args:
 		active (bool): 지문 인식기 활성화 여부
 	"""
-	CONFIG["sensor_active"] = active 
+	CONFIG["sensor_active"] = active
+
+def get_student_id() -> str:
+	"""
+	현재 입력된 학번을 반환합니다.
+	
+	Returns:
+		str: 현재 입력된 학번
+	"""
+	return CONFIG["student_id"]
+
+def set_student_id(student_id: str) -> None:
+	"""
+	학번을 설정합니다.
+	
+	Args:
+		student_id (str): 설정할 학번
+	"""
+	CONFIG["student_id"] = student_id
+
+def clear_student_id() -> None:
+	"""
+	학번을 초기화합니다.
+	"""
+	CONFIG["student_id"] = "" 
