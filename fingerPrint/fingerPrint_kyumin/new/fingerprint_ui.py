@@ -2,7 +2,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import QTime, QDateTime, Qt, QTimer
 from PyQt5.QtWidgets import QMainWindow
 from PyQt5.uic import loadUi
-from status_manager import Status, get_status, set_status, get_student_id, set_student_id, set_sensor_active
+from status_manager import Status, get_status, set_status, get_student_id, set_student_id, set_sensor_active, clear_student_id
 from threading import Timer
 
 class FingerprintUI(QMainWindow):
@@ -13,6 +13,9 @@ class FingerprintUI(QMainWindow):
 		super().__init__()
 		# UI 파일 로드
 		loadUi("new.ui", self)
+		
+		self.message_timer = QTimer()
+		self.message_timer.timeout.connect(self.clear_message)
 
 		self.push_buttons = {
 			Status.ATTENDANCE: self.fp_pushButton_on,
@@ -64,6 +67,7 @@ class FingerprintUI(QMainWindow):
 		# 초기 페이지를 출석 페이지로 설정
 		self.fingerprint_button.click()
 
+		self.clear_message()
 		self.showTime()
 
 	def changeStdNum(self, num):
@@ -76,8 +80,8 @@ class FingerprintUI(QMainWindow):
 			set_student_id(get_student_id() + num)
 
 		# 대기 상태로 전환
-		self.updateButtonState(Status.WAITING_STUDENT_ID)
-		self.new_label_text.setText(get_student_id() if get_student_id() else "학번을 입력해주세요")
+		self.updateButtonState(Status.WAITING)
+		self.set_message(get_student_id() if get_student_id() else "학번을 입력해 주세요")
 
 	def changePage(self, pageIndex):
 		"""페이지 전환"""
@@ -87,7 +91,9 @@ class FingerprintUI(QMainWindow):
 		self.page_buttons[pageIndex].setStyleSheet("background-color: gray; color: rgb(227, 227, 227); border: 0px;")
 		
 		# 페이지 전환 시 라벨 초기화
-		self.label_clear()
+		self.clear_message()
+
+		clear_student_id()
 
 		# 상태 업데이트 및 표시
 		if pageIndex == 0:
@@ -95,7 +101,7 @@ class FingerprintUI(QMainWindow):
 		elif pageIndex == 1:
 			self.updateButtonState(Status.EATING)
 		elif pageIndex == 2:  # 등록 페이지
-			self.updateButtonState(Status.WAITING_STUDENT_ID)
+			self.updateButtonState(Status.WAITING)
 
 	def showTime(self):
 		"""시간 표시 함수"""
@@ -125,11 +131,34 @@ class FingerprintUI(QMainWindow):
 		set_status(button_status)
 		print(get_status())
 
-	def label_clear(self):
-		"""라벨 초기화"""
+		if button_status == Status.REGISTER:
+			clear_student_id()
+			return self.updateButtonState(Status.WAITING)
+
+	def set_message(self, text: str):
+		"""세 개의 라벨에 동일한 텍스트 설정"""
+		self.fp_label_text.setText(text)
+		self.out_label_text.setText(text)
+		self.new_label_text.setText(text)
+		# 3초 후에 기본 메시지로 복귀
+		self.message_timer.start(3000)  # 3000ms = 3초
+
+	def set_success_message(self, text: str):
+		"""세 개의 라벨에 동일한 텍스트 설정"""
+		self.fp_label_text.setText(text)
+		self.out_label_text.setText(text)
+		self.new_label_text.setText(text)
+		# 3초 후에 기본 메시지로 복귀
+		self.message_timer.start(3000)  # 3000ms = 3초
+		set_sensor_active(False)
+		
+	def clear_message(self):
+		"""기본 메시지로 복귀"""
 		self.fp_label_text.setText("지문을 인식해 주세요")
 		self.out_label_text.setText("지문을 인식해 주세요")
 		self.new_label_text.setText("학번을 입력해 주세요")
+		self.message_timer.stop()
+		set_sensor_active(True)
 
 	def deactive_button(self):
 		"""모든 버튼 비활성화"""

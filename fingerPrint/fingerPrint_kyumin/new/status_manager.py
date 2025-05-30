@@ -2,7 +2,7 @@ from enum import Enum
 
 # 상태 정의
 class Status(Enum):
-	WAITING_STUDENT_ID = "학번입력대기"
+	WAITING = "대기"
 	REGISTER = "등록"
 	ATTENDANCE = "등교"
 	LEAVE = "하교"
@@ -32,7 +32,7 @@ def get_status() -> Status:
 def set_status(new_status: Status) -> None:
 	"""
 	애플리케이션의 상태를 변경합니다.
-	WAITING_STUDENT_ID 상태일 때는 센서를 비활성화하고,
+	WAITING 상태일 때는 센서를 비활성화하고,
 	다른 상태일 때는 센서를 활성화합니다.
 	
 	Args:
@@ -41,7 +41,7 @@ def set_status(new_status: Status) -> None:
 	CONFIG["status"] = new_status
 	
 	# 상태에 따라 센서 활성화 상태 자동 변경
-	if new_status == Status.WAITING_STUDENT_ID:
+	if new_status == Status.WAITING:
 		set_sensor_active(False)
 	elif new_status == Status.REGISTER:
 		set_sensor_active(True)

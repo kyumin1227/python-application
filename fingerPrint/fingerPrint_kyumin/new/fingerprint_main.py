@@ -4,25 +4,36 @@ from PyQt5 import QtWidgets
 from fingerprint_ui import FingerprintUI
 from status_manager import set_mock_mode
 from fingerprint_sensor import FingerprintSensor
+from fingerprint_api import api_message, init_api
 from queue import Queue
 
 # 환경 변수 설정
 USE_MOCK = len(sys.argv) > 1 and sys.argv[1] == "mock"
 set_mock_mode(USE_MOCK)
 
-if __name__ == "__main__":
+def main():
 	app = QtWidgets.QApplication(sys.argv)
-	window = FingerprintUI()
 	
-	# 지문 데이터 전달을 위한 큐 생성
-	fingerprint_queue = Queue()
+	# UI 생성
+	ui = FingerprintUI()
 	
-	# UI 먼저 표시
-	# window.showFullScreen()
-	window.show()
+	# API 초기화
+	init_api()
 	
-	# 센서 스레드 생성 및 시작
-	sensor = FingerprintSensor(fingerprint_queue)
+	# API 메시지 핸들러와 UI 연결
+	api_message.message.connect(ui.set_success_message)
+	
+	# 센서 인스턴스 생성
+	sensor = FingerprintSensor()
+	sensor.fingerprint_detected.connect(ui.set_message)  # 센서 메시지도 UI에 표시
+	sensor.error_occurred.connect(ui.set_message)  # 에러 메시지도 UI에 표시
 	sensor.start()
 	
+	# UI 표시
+	# ui.show()
+	ui.showFullScreen()
+	
 	sys.exit(app.exec_())
+
+if __name__ == "__main__":
+	main()

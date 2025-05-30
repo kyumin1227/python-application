@@ -3,11 +3,11 @@ from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.backends import default_backend
 from PyQt5.QtCore import QThread, pyqtSignal
-from status_manager import is_mock, get_status, is_sensor_active, Status
+from status_manager import is_mock, get_status, is_sensor_active, Status, get_student_id
+from fingerprint_api import get_all_fingerprint_data, check_student_registration, register_fingerprint, log_status, close_door
 from queue import Queue
 import time
 import base64
-import requests
 import os
 
 class FingerprintSensor(QThread):
@@ -15,18 +15,13 @@ class FingerprintSensor(QThread):
 	fingerprint_detected = pyqtSignal(str)  # 지문 템플릿을 전달
 	error_occurred = pyqtSignal(str)  # 에러 메시지 전달
 
-	sensor = None
-
-	PASSWORD = None
-	SERVER_KEY = None
-	SERVER_URL = None
-
-	STUDENT_LIST = []
-
-	def __init__(self, fingerprint_queue: Queue):
+	def __init__(self):
 		super().__init__()
 		self.running = True
-		self.fingerprint_queue = fingerprint_queue
+		self.PASSWORD = None
+		self.SERVER_URL = None
+		self.SERVER_KEY = None
+		self.STUDENT_LIST = []
 
 		# 환경 변수 및 모듈 초기화
 		if is_mock():
@@ -42,24 +37,21 @@ class FingerprintSensor(QThread):
 
 		# 센서 초기화
 		try:
-			self.sensor = PyFingerprint('/dev/ttyUSB0', 57600, 0xFFFFFFFF, self.PASSWORD)
+			self.sensor = PyFingerprint('/dev/ttyS0', 57600, 0xFFFFFFFF, 0x00000000)
 			print("지문 인식기 연결 성공")
 		except Exception as e:
 			print("지문 인식기 연결 실패:", e)
 			self.error_occurred.emit(str(e))
 
-		# self.getFingerList(self.sensor)
+		self.getFingerList(self.sensor)
 
 	def run(self):
 		"""스레드에서 실행될 메인 로직"""
 		while self.running:
 
-			result_dict = self.scan_fingerprint()
+			self.scan_fingerprint()
 
-			if result_dict != None:
-				self.fingerprint_queue.put(result_dict)
-
-	def scan_fingerprint(self) -> dict:
+	def scan_fingerprint(self):
 		"""지문 스캔 처리"""
 		try:
 			# 센서가 비활성화 상태면 None 반환
@@ -69,6 +61,7 @@ class FingerprintSensor(QThread):
 			current_status = get_status()
 			
 			if current_status == Status.REGISTER:
+				# TODO 학번 검증 로직
 				return self.register_fingerprint()
 			else:
 				return self.verify_fingerprint(current_status)
@@ -77,42 +70,47 @@ class FingerprintSensor(QThread):
 			self.error_occurred.emit(f"지문 스캔 중 오류 발생: {str(e)}")
 			return None
 
-	def register_fingerprint(self) -> dict:
+	def register_fingerprint(self):
 		"""지문 등록 처리"""
-		if not hasattr(self, 'fpData1'):
-			# 첫 번째 지문 스캔
-			self.sensor.readImage()
-			self.fpData1 = self.sensor.downloadCharacteristics()
-			self.fingerprint_detected.emit("첫 번째 지문이 등록되었습니다. 두 번째 지문을 스캔해주세요.")
-			return None
-		else:
-			# 두 번째 지문 스캔
-			self.sensor.readImage()
-			self.fpData2 = self.sensor.downloadCharacteristics()
-			
-			# 두 지문 비교
-			self.sensor.uploadCharacteristics(0x01, self.fpData1)
-			self.sensor.uploadCharacteristics(0x02, self.fpData2)
-			
-			if self.sensor.compareCharacteristics():
-				# 템플릿 생성 및 저장
-				self.sensor.createTemplate()
-				self.sensor.storeTemplate()
-				self.fingerprint_detected.emit("지문 등록이 완료되었습니다.")
-				# 초기화
-				delattr(self, 'fpData1')
-				return "REGISTER_SUCCESS"
-			else:
-				self.fingerprint_detected.emit("두 지문이 일치하지 않습니다. 다시 시도해주세요.")
-				delattr(self, 'fpData1')
-				return None
+		student_id = get_student_id()
+		if not check_student_registration(student_id):
+			return
 
-	def verify_fingerprint(self, current_status: Status) -> dict:
-		"""지문 검증 처리"""
 		start_time = time.time()
 
-		while time.time() - start_time < 0.5:
-			self.sensor.readImage()
+		while time.time() - start_time < 5:
+			if self.sensor.readImage() != False:
+				self.sensor.convertImage(0x01)
+				break
+
+		self.fingerprint_detected.emit("첫 번째 지문이 등록되었습니다. 두 번째 지문을 스캔해주세요.")
+		start_time = time.time()
+
+		while time.time() - start_time < 5:
+			if self.sensor.readImage() != False:
+				self.sensor.convertImage(0x02)
+				break
+
+		if self.sensor.compareCharacteristics() == 0:
+			print("지문이 일치하지 않습니다.")
+			return None
+
+		raw_salt = os.urandom(16)
+		key = self.generate_key(self.PASSWORD, raw_salt)
+
+		fp_data1 = self.encode_and_encrypt(0x01, key)
+		fp_data2 = self.encode_and_encrypt(0x02, key)
+		salt = base64.b64encode(raw_salt).decode("utf-8")
+
+		# API 호출하여 지문 데이터 전송
+		register_fingerprint(student_id, fp_data1, fp_data2, salt)
+
+		return self.getFingerList()
+
+	def verify_fingerprint(self, current_status: Status):
+		"""지문 검증 처리"""
+
+		if self.sensor.readImage() != False:
 			self.sensor.convertImage(0x01)
 			result = self.sensor.searchTemplate()
 			
@@ -120,11 +118,14 @@ class FingerprintSensor(QThread):
 				# 일치하는 지문을 찾았을 때
 				student_id = self.STUDENT_LIST[result[0]]
 
-				result_dict = {
-					"status": current_status,
-					"student_id": student_id
-				}
-				return result_dict
+				if current_status == Status.CLOSE:
+					close_door(student_id)
+					return
+				
+				# 로그 API 호출
+				log_status(student_id, current_status)
+
+				return
 
 		return None
 
@@ -132,6 +133,17 @@ class FingerprintSensor(QThread):
 		"""스레드 종료"""
 		self.running = False
 		self.wait()
+
+	# 키 생성 함수
+	def generate_key(self, password, salt):
+		kdf = PBKDF2HMAC(
+			algorithm=hashes.SHA256(),
+			length=32,
+			salt=salt,
+			iterations=100000,
+			backend=default_backend()
+		)
+		return kdf.derive(password)
 
 	def encrypt(self, data, key):
 		"""데이터 암호화"""
@@ -148,6 +160,13 @@ class FingerprintSensor(QThread):
 		cipher = Cipher(algorithms.AES(key), modes.CFB(iv), backend=default_backend())
 		decryptor = cipher.decryptor()
 		return decryptor.update(encrypted_data) + decryptor.finalize()
+	
+	def encode_and_encrypt(self, charBufferId, key):
+		"""데이터 암호화 및 인코딩"""
+		fingerprint_data = bytes(self.sensor.downloadCharacteristics(charBufferId))
+		encrypted_data = self.encrypt(fingerprint_data, key)
+		encoded_data = base64.b64encode(encrypted_data)
+		return encoded_data
 
 	def decode_and_decrypt(self, encoded_data: str, salt_b64: str) -> list:
 		"""인코딩된 데이터 복호화"""
@@ -159,9 +178,8 @@ class FingerprintSensor(QThread):
 
 	def getFingerList(self, f):
 		"""서버에서 지문 데이터 가져오기"""
-		res = requests.get(self.SERVER_URL + "/students")
-		jsonData = res.json()
-		dataList = jsonData["data"]
+		self.sensor.clearDatabase()
+		dataList = get_all_fingerprint_data()
 		for data in dataList:
 			fpData1 = self.decode_and_decrypt(data["fingerPrintImage1"], data["salt"])
 			fpData2 = self.decode_and_decrypt(data["fingerPrintImage2"], data["salt"])

@@ -8,6 +8,7 @@ class MockFingerprint:
         self.template_index = 0
 
     def clearDatabase(self):
+        print("fingerprint clear")
         self.templates = []
         self.template_index = 0
         return True
