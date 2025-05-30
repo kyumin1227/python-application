@@ -5,35 +5,29 @@ from cryptography.hazmat.backends import default_backend
 from PyQt5.QtCore import QThread, pyqtSignal
 from status_manager import is_mock, get_status, is_sensor_active, Status, get_student_id
 from fingerprint_api import get_all_fingerprint_data, check_student_registration, register_fingerprint, log_status, close_door
-from queue import Queue
 import time
 import base64
 import os
 
+MATCH_THRESHOLD = 50	# 동일 지문 판단 기준
+
 class FingerprintSensor(QThread):
 	# 지문 감지 시그널
-	fingerprint_detected = pyqtSignal(str)  # 지문 템플릿을 전달
-	error_occurred = pyqtSignal(str)  # 에러 메시지 전달
+	message = pyqtSignal(str)  # 지문 템플릿을 전달
 
 	def __init__(self):
 		super().__init__()
 		self.running = True
 		self.PASSWORD = None
-		self.SERVER_URL = None
-		self.SERVER_KEY = None
 		self.STUDENT_LIST = []
 
 		# 환경 변수 및 모듈 초기화
 		if is_mock():
 			from mock_fingerprint import MockFingerprint as PyFingerprint
 			self.PASSWORD = "123".encode("utf-8")
-			self.SERVER_URL = "http://210.101.236.158:8081/api/fingerprint"
-			self.SERVER_KEY = ""
 		else:
 			from pyfingerprint.pyfingerprint import PyFingerprint
 			self.PASSWORD = os.getenv("FP_PASSWORD").encode("utf-8")	# 암호화 시 사용하는 비밀번호
-			self.SERVER_URL = os.getenv("FP_URL")	# 서버 주소
-			self.SERVER_KEY = os.getenv("FP_KEY")	# 서버에 전달하는 키
 
 		# 센서 초기화
 		try:
@@ -41,9 +35,9 @@ class FingerprintSensor(QThread):
 			print("지문 인식기 연결 성공")
 		except Exception as e:
 			print("지문 인식기 연결 실패:", e)
-			self.error_occurred.emit(str(e))
+			self.message.emit(str(e))
 
-		self.getFingerList(self.sensor)
+		self.getFingerList()
 
 	def run(self):
 		"""스레드에서 실행될 메인 로직"""
@@ -61,13 +55,12 @@ class FingerprintSensor(QThread):
 			current_status = get_status()
 			
 			if current_status == Status.REGISTER:
-				# TODO 학번 검증 로직
 				return self.register_fingerprint()
 			else:
 				return self.verify_fingerprint(current_status)
 					
 		except Exception as e:
-			self.error_occurred.emit(f"지문 스캔 중 오류 발생: {str(e)}")
+			self.message.emit(f"지문 스캔 중 오류 발생: {str(e)}")
 			return None
 
 	def register_fingerprint(self):
@@ -83,7 +76,7 @@ class FingerprintSensor(QThread):
 				self.sensor.convertImage(0x01)
 				break
 
-		self.fingerprint_detected.emit("첫 번째 지문이 등록되었습니다. 두 번째 지문을 스캔해주세요.")
+		self.message.emit("첫 번째 지문이 등록되었습니다. \n두 번째 지문을 스캔해주세요.")
 		start_time = time.time()
 
 		while time.time() - start_time < 5:
@@ -92,7 +85,7 @@ class FingerprintSensor(QThread):
 				break
 
 		if self.sensor.compareCharacteristics() == 0:
-			print("지문이 일치하지 않습니다.")
+			self.message.emit("등록한 지문이 일치하지 않습니다.")
 			return None
 
 		raw_salt = os.urandom(16)
@@ -103,9 +96,8 @@ class FingerprintSensor(QThread):
 		salt = base64.b64encode(raw_salt).decode("utf-8")
 
 		# API 호출하여 지문 데이터 전송
-		register_fingerprint(student_id, fp_data1, fp_data2, salt)
-
-		return self.getFingerList()
+		if register_fingerprint(student_id, fp_data1, fp_data2, salt):
+			self.create_and_store_template(student_id)
 
 	def verify_fingerprint(self, current_status: Status):
 		"""지문 검증 처리"""
@@ -114,7 +106,7 @@ class FingerprintSensor(QThread):
 			self.sensor.convertImage(0x01)
 			result = self.sensor.searchTemplate()
 			
-			if result[0] >= 0 and result[1] >= 65:
+			if result[0] >= 0 and result[1] >= MATCH_THRESHOLD:
 				# 일치하는 지문을 찾았을 때
 				student_id = self.STUDENT_LIST[result[0]]
 
@@ -176,17 +168,21 @@ class FingerprintSensor(QThread):
 		decrypted = self.decrypt(raw_data, key)
 		return list(decrypted)
 
-	def getFingerList(self, f):
+	def getFingerList(self):
 		"""서버에서 지문 데이터 가져오기"""
 		self.sensor.clearDatabase()
+		self.STUDENT_LIST.clear()
 		dataList = get_all_fingerprint_data()
 		for data in dataList:
 			fpData1 = self.decode_and_decrypt(data["fingerPrintImage1"], data["salt"])
 			fpData2 = self.decode_and_decrypt(data["fingerPrintImage2"], data["salt"])
 
-			f.uploadCharacteristics(0x01, fpData1)
-			f.uploadCharacteristics(0x02, fpData2)
-			f.createTemplate()
-			f.storeTemplate()
+			self.sensor.uploadCharacteristics(0x01, fpData1)
+			self.sensor.uploadCharacteristics(0x02, fpData2)
+			self.create_and_store_template(data["studentNumber"])
 
-			self.STUDENT_LIST.append(data["studentNumber"])
+	def create_and_store_template(self, student_number):
+		"""버퍼의 지문 데이터 지문 인식기에 저장"""
+		self.sensor.createTemplate()
+		self.sensor.storeTemplate()
+		self.STUDENT_LIST.append(student_number)

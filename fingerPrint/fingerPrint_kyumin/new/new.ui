@@ -419,8 +419,9 @@ color: rgb(227, 227, 227);</string>
        </font>
       </property>
       <property name="styleSheet">
-       <string notr="true">background-color: rgb(50, 50, 50);
-color: rgb(227, 227, 227);</string>
+       <string notr="true">background-color: rgb(60, 60, 60);
+color: rgb(227, 227, 227);
+border: 0px solid rgb(227, 227, 227);</string>
       </property>
       <property name="text">
        <string>1</string>
@@ -441,8 +442,9 @@ color: rgb(227, 227, 227);</string>
        </font>
       </property>
       <property name="styleSheet">
-       <string notr="true">background-color: rgb(50, 50, 50);
-color: rgb(227, 227, 227);</string>
+       <string notr="true">background-color: rgb(60, 60, 60);
+color: rgb(227, 227, 227);
+border: 0px solid rgb(227, 227, 227);</string>
       </property>
       <property name="text">
        <string>2</string>
@@ -463,8 +465,9 @@ color: rgb(227, 227, 227);</string>
        </font>
       </property>
       <property name="styleSheet">
-       <string notr="true">background-color: rgb(50, 50, 50);
-color: rgb(227, 227, 227);</string>
+       <string notr="true">background-color: rgb(60, 60, 60);
+color: rgb(227, 227, 227);
+border: 0px solid rgb(227, 227, 227);</string>
       </property>
       <property name="text">
        <string>3</string>
@@ -485,8 +488,9 @@ color: rgb(227, 227, 227);</string>
        </font>
       </property>
       <property name="styleSheet">
-       <string notr="true">background-color: rgb(50, 50, 50);
-color: rgb(227, 227, 227);</string>
+       <string notr="true">background-color: rgb(60, 60, 60);
+color: rgb(227, 227, 227);
+border: 0px solid rgb(227, 227, 227);</string>
       </property>
       <property name="text">
        <string>4</string>
@@ -507,8 +511,9 @@ color: rgb(227, 227, 227);</string>
        </font>
       </property>
       <property name="styleSheet">
-       <string notr="true">background-color: rgb(50, 50, 50);
-color: rgb(227, 227, 227);</string>
+       <string notr="true">background-color: rgb(60, 60, 60);
+color: rgb(227, 227, 227);
+border: 0px solid rgb(227, 227, 227);</string>
       </property>
       <property name="text">
        <string>5</string>
@@ -529,8 +534,9 @@ color: rgb(227, 227, 227);</string>
        </font>
       </property>
       <property name="styleSheet">
-       <string notr="true">background-color: rgb(50, 50, 50);
-color: rgb(227, 227, 227);</string>
+       <string notr="true">background-color: rgb(60, 60, 60);
+color: rgb(227, 227, 227);
+border: 0px solid rgb(227, 227, 227);</string>
       </property>
       <property name="text">
        <string>&lt;-</string>
@@ -551,8 +557,9 @@ color: rgb(227, 227, 227);</string>
        </font>
       </property>
       <property name="styleSheet">
-       <string notr="true">background-color: rgb(50, 50, 50);
-color: rgb(227, 227, 227);</string>
+       <string notr="true">background-color: rgb(60, 60, 60);
+color: rgb(227, 227, 227);
+border: 0px solid rgb(227, 227, 227);</string>
       </property>
       <property name="text">
        <string>6</string>
@@ -573,8 +580,9 @@ color: rgb(227, 227, 227);</string>
        </font>
       </property>
       <property name="styleSheet">
-       <string notr="true">background-color: rgb(50, 50, 50);
-color: rgb(227, 227, 227);</string>
+       <string notr="true">background-color: rgb(60, 60, 60);
+color: rgb(227, 227, 227);
+border: 0px solid rgb(227, 227, 227);</string>
       </property>
       <property name="text">
        <string>7</string>
@@ -595,8 +603,9 @@ color: rgb(227, 227, 227);</string>
        </font>
       </property>
       <property name="styleSheet">
-       <string notr="true">background-color: rgb(50, 50, 50);
-color: rgb(227, 227, 227);</string>
+       <string notr="true">background-color: rgb(60, 60, 60);
+color: rgb(227, 227, 227);
+border: 0px solid rgb(227, 227, 227);</string>
       </property>
       <property name="text">
        <string>8</string>
@@ -617,8 +626,9 @@ color: rgb(227, 227, 227);</string>
        </font>
       </property>
       <property name="styleSheet">
-       <string notr="true">background-color: rgb(50, 50, 50);
-color: rgb(227, 227, 227);</string>
+       <string notr="true">background-color: rgb(60, 60, 60);
+color: rgb(227, 227, 227);
+border: 0px solid rgb(227, 227, 227);</string>
       </property>
       <property name="text">
        <string>9</string>
@@ -639,8 +649,9 @@ color: rgb(227, 227, 227);</string>
        </font>
       </property>
       <property name="styleSheet">
-       <string notr="true">background-color: rgb(50, 50, 50);
-color: rgb(227, 227, 227);</string>
+       <string notr="true">background-color: rgb(60, 60, 60);
+color: rgb(227, 227, 227);
+border: 0px solid rgb(227, 227, 227);</string>
       </property>
       <property name="text">
        <string>0</string>
@@ -661,7 +672,7 @@ color: rgb(227, 227, 227);</string>
        </font>
       </property>
       <property name="styleSheet">
-       <string notr="true">background-color: rgb(50, 50, 50);
+       <string notr="true">background-color: rgb(60, 60, 60);
 color: rgb(227, 227, 227);</string>
       </property>
       <property name="text">

@@ -1,8 +1,7 @@
-from status_manager import get_status, Status, is_mock
+from status_manager import Status
 import requests
 import os
 from PyQt5.QtCore import QObject, pyqtSignal
-import time
 
 # 전역 변수
 SERVER_URL = None

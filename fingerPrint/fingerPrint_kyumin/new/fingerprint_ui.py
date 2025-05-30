@@ -1,5 +1,5 @@
-from PyQt5 import QtCore, QtGui, QtWidgets
-from PyQt5.QtCore import QTime, QDateTime, Qt, QTimer
+import os
+from PyQt5.QtCore import QDateTime, QTimer
 from PyQt5.QtWidgets import QMainWindow
 from PyQt5.uic import loadUi
 from status_manager import Status, get_status, set_status, get_student_id, set_student_id, set_sensor_active, clear_student_id
@@ -12,7 +12,8 @@ class FingerprintUI(QMainWindow):
 	def __init__(self):
 		super().__init__()
 		# UI 파일 로드
-		loadUi("new.ui", self)
+		ui_path = os.path.join(os.path.dirname(__file__), "new.ui")
+		loadUi(ui_path, self)
 		
 		self.message_timer = QTimer()
 		self.message_timer.timeout.connect(self.clear_message)
@@ -87,7 +88,7 @@ class FingerprintUI(QMainWindow):
 		"""페이지 전환"""
 		self.pages.setCurrentIndex(pageIndex)
 		for button in self.page_buttons:
-			button.setStyleSheet("background-color: rgb(78, 78, 78); color: rgb(227, 227, 227);")
+			button.setStyleSheet("background-color: rgb(78, 78, 78); color: rgb(227, 227, 227); border: 0px;")
 		self.page_buttons[pageIndex].setStyleSheet("background-color: gray; color: rgb(227, 227, 227); border: 0px;")
 		
 		# 페이지 전환 시 라벨 초기화
@@ -118,10 +119,9 @@ class FingerprintUI(QMainWindow):
 		
 		# 모든 버튼 색상 초기화
 		for button in self.push_buttons.values():
-			button.setStyleSheet("background-color: rgb(60, 60, 60); color: rgb(227, 227, 227);")
+			button.setStyleSheet("background-color: rgb(60, 60, 60); color: rgb(227, 227, 227); border: 0px;")
 
-		self.new_pushButton_ok.setStyleSheet("background-color: rgb(50, 50, 50); color: rgb(227, 227, 227);")
-		self.close_button.setStyleSheet("background-color: rgb(78, 78, 78); color: rgb(227, 227, 227);")
+		self.close_button.setStyleSheet("background-color: rgb(78, 78, 78); color: rgb(227, 227, 227); border: 0px;")
 		
 		# 선택된 버튼 색상 강조
 		if button_status in self.push_buttons and button_status is not Status.REGISTER:
@@ -143,7 +143,7 @@ class FingerprintUI(QMainWindow):
 		# 3초 후에 기본 메시지로 복귀
 		self.message_timer.start(3000)  # 3000ms = 3초
 
-	def set_success_message(self, text: str):
+	def set_info_message(self, text: str):
 		"""세 개의 라벨에 동일한 텍스트 설정"""
 		self.fp_label_text.setText(text)
 		self.out_label_text.setText(text)
