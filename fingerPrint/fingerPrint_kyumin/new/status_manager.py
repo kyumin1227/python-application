@@ -12,13 +12,11 @@ class Status(Enum):
 	RETURN = "복귀"
 	CLOSE = "문닫기"
 
-# 전역 설정
-CONFIG = {
-	'use_mock': False,
-	'status': Status.ATTENDANCE,  # 기본 상태는 등교
-	'sensor_active': False,  # 지문 인식기 활성화 상태
-	'student_id': ""  # 현재 입력된 학번
-}
+# 전역 설정 변수
+use_mock = False
+status = Status.ATTENDANCE  # 기본 상태는 등교
+sensor_active = False  # 지문 인식기 활성화 상태
+student_id = ""  # 현재 입력된 학번
 
 def get_status() -> Status:
 	"""
@@ -27,7 +25,7 @@ def get_status() -> Status:
 	Returns:
 		Status: 현재 상태 (등교/하교/외출/등록)
 	"""
-	return CONFIG["status"]
+	return status
 
 def set_status(new_status: Status) -> None:
 	"""
@@ -38,7 +36,8 @@ def set_status(new_status: Status) -> None:
 	Args:
 		new_status (Status): 변경할 새로운 상태
 	"""
-	CONFIG["status"] = new_status
+	global status
+	status = new_status
 	
 	# 상태에 따라 센서 활성화 상태 자동 변경
 	if new_status == Status.WAITING:
@@ -56,16 +55,17 @@ def is_mock() -> bool:
 	Returns:
 		bool: mock 모드이면 True, 아니면 False
 	"""
-	return CONFIG["use_mock"]
+	return use_mock
 
-def set_mock_mode(use_mock: bool) -> None:
+def set_mock_mode(use_mock_mode: bool) -> None:
 	"""
 	mock 모드를 설정합니다.
 	
 	Args:
-		use_mock (bool): mock 모드 사용 여부
+		use_mock_mode (bool): mock 모드 사용 여부
 	"""
-	CONFIG["use_mock"] = use_mock
+	global use_mock
+	use_mock = use_mock_mode
 
 def is_sensor_active() -> bool:
 	"""
@@ -74,7 +74,7 @@ def is_sensor_active() -> bool:
 	Returns:
 		bool: 지문 인식기가 활성화되어 있으면 True, 아니면 False
 	"""
-	return CONFIG["sensor_active"]
+	return sensor_active
 
 def set_sensor_active(active: bool) -> None:
 	"""
@@ -83,7 +83,8 @@ def set_sensor_active(active: bool) -> None:
 	Args:
 		active (bool): 지문 인식기 활성화 여부
 	"""
-	CONFIG["sensor_active"] = active
+	global sensor_active
+	sensor_active = active
 
 def get_student_id() -> str:
 	"""
@@ -92,19 +93,21 @@ def get_student_id() -> str:
 	Returns:
 		str: 현재 입력된 학번
 	"""
-	return CONFIG["student_id"]
+	return student_id
 
-def set_student_id(student_id: str) -> None:
+def set_student_id(new_student_id: str) -> None:
 	"""
 	학번을 설정합니다.
 	
 	Args:
-		student_id (str): 설정할 학번
+		new_student_id (str): 설정할 학번
 	"""
-	CONFIG["student_id"] = student_id
+	global student_id
+	student_id = new_student_id
 
 def clear_student_id() -> None:
 	"""
 	학번을 초기화합니다.
 	"""
-	CONFIG["student_id"] = "" 
+	global student_id
+	student_id = "" 

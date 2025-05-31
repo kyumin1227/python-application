@@ -14,29 +14,15 @@ class FingerprintUI(QMainWindow):
 		# UI 파일 로드
 		ui_path = os.path.join(os.path.dirname(__file__), "new.ui")
 		loadUi(ui_path, self)
-		
-		self.message_timer = QTimer()
-		self.message_timer.timeout.connect(self.clear_message)
 
-		self.push_buttons = {
-			Status.ATTENDANCE: self.fp_pushButton_on,
-			Status.LEAVE: self.fp_pushButton_out,
-			Status.EATING: self.out_pushButton_eating,
-			Status.LIB: self.out_pushButton_lib,
-			Status.ETC: self.out_pushButton_else,
-			Status.RETURN: self.out_pushButton_return,
-			Status.REGISTER: self.new_pushButton_ok,
-			Status.CLOSE: self.close_button
-		}
-
+		# 페이지 버튼 세팅
 		self.page_buttons = [self.fingerprint_button, self.outing_button, self.new_fingerprint_button]
-		
+
 		# 페이지 버튼 연결
-		self.fingerprint_button.clicked.connect(lambda: self.changePage(0))
-		self.outing_button.clicked.connect(lambda: self.changePage(1))
-		self.new_fingerprint_button.clicked.connect(lambda: self.changePage(2))
+		for index, button in enumerate(self.page_buttons):
+			button.clicked.connect(lambda _, i=index: self.changePage(i))
 		
-		# 버튼 이벤트 연결
+		# 숫자 버튼 세팅
 		digit_buttons = {
 			self.new_pushButton_0: "0",
 			self.new_pushButton_1: "1",
@@ -53,21 +39,34 @@ class FingerprintUI(QMainWindow):
 		# 숫자 버튼 이벤트 연결
 		for button, digit in digit_buttons.items():
 			button.clicked.connect(lambda _, d=digit: self.changeStdNum(d))
-		
+
 		# 기타 버튼 이벤트 연결
 		self.new_pushButton_back.clicked.connect(lambda: self.changeStdNum("back"))
-		self.fp_pushButton_on.clicked.connect(lambda: self.updateButtonState(Status.ATTENDANCE))
-		self.fp_pushButton_out.clicked.connect(lambda: self.updateButtonState(Status.LEAVE))
-		self.out_pushButton_eating.clicked.connect(lambda: self.updateButtonState(Status.EATING))
-		self.out_pushButton_lib.clicked.connect(lambda: self.updateButtonState(Status.LIB))
-		self.out_pushButton_else.clicked.connect(lambda: self.updateButtonState(Status.ETC))
-		self.out_pushButton_return.clicked.connect(lambda: self.updateButtonState(Status.RETURN))
-		self.new_pushButton_ok.clicked.connect(lambda: self.updateButtonState(Status.REGISTER))
-		self.close_button.clicked.connect(lambda: self.updateButtonState(Status.CLOSE))
+
+		# api 버튼 세팅
+		self.push_buttons = {
+			Status.ATTENDANCE: self.fp_pushButton_on,
+			Status.LEAVE: self.fp_pushButton_out,
+			Status.EATING: self.out_pushButton_eating,
+			Status.LIB: self.out_pushButton_lib,
+			Status.ETC: self.out_pushButton_else,
+			Status.RETURN: self.out_pushButton_return,
+			Status.REGISTER: self.new_pushButton_ok,
+			Status.CLOSE: self.close_button
+		}
+		
+		# api 버튼 이벤트 연결
+		for status, button in self.push_buttons.items():
+			button.clicked.connect(lambda _, s=status: self.updateButtonState(s))
 		
 		# 초기 페이지를 출석 페이지로 설정
 		self.fingerprint_button.click()
 
+		# 메시지 타이머 세팅
+		self.message_timer = QTimer()
+		self.message_timer.timeout.connect(self.clear_message)
+
+		# 메시지 초기화 및 시계 실행
 		self.clear_message()
 		self.showTime()
 
@@ -87,21 +86,22 @@ class FingerprintUI(QMainWindow):
 	def changePage(self, pageIndex):
 		"""페이지 전환"""
 		self.pages.setCurrentIndex(pageIndex)
+
+		# 선택된 페이지 버튼 강조
 		for button in self.page_buttons:
 			button.setStyleSheet("background-color: rgb(78, 78, 78); color: rgb(227, 227, 227); border: 0px;")
 		self.page_buttons[pageIndex].setStyleSheet("background-color: gray; color: rgb(227, 227, 227); border: 0px;")
 		
-		# 페이지 전환 시 라벨 초기화
+		# 페이지 전환 시 라벨 및 학번 초기화
 		self.clear_message()
-
 		clear_student_id()
 
 		# 상태 업데이트 및 표시
-		if pageIndex == 0:
+		if pageIndex == 0:		# 등하교 페이지
 			self.updateButtonState(Status.ATTENDANCE)
-		elif pageIndex == 1:
+		elif pageIndex == 1:	# 외출 페이지
 			self.updateButtonState(Status.EATING)
-		elif pageIndex == 2:  # 등록 페이지
+		elif pageIndex == 2:  	# 지문 등록 페이지
 			self.updateButtonState(Status.WAITING)
 
 	def showTime(self):
@@ -111,6 +111,7 @@ class FingerprintUI(QMainWindow):
 		self.fp_label_date.setText(current_date)
 		self.out_label_date.setText(current_date)
 
+		# 1초 마다 시간 업데이트
 		timer = Timer(1, self.showTime)
 		timer.start()
 
@@ -131,6 +132,7 @@ class FingerprintUI(QMainWindow):
 		set_status(button_status)
 		print(get_status())
 
+		# 지문 등록 이벤트 처리
 		if button_status == Status.REGISTER:
 			clear_student_id()
 			return self.updateButtonState(Status.WAITING)
@@ -150,10 +152,11 @@ class FingerprintUI(QMainWindow):
 		self.new_label_text.setText(text)
 		# 3초 후에 기본 메시지로 복귀
 		self.message_timer.start(3000)  # 3000ms = 3초
+		# 정보 표출 중 지문 센서 비활성화
 		set_sensor_active(False)
 		
 	def clear_message(self):
-		"""기본 메시지로 복귀"""
+		"""기본 메시지로 복귀 및 지문 센서 활성화"""
 		self.fp_label_text.setText("지문을 인식해 주세요")
 		self.out_label_text.setText("지문을 인식해 주세요")
 		self.new_label_text.setText("학번을 입력해 주세요")

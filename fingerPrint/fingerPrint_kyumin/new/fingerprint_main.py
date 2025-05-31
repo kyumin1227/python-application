@@ -5,7 +5,7 @@ from status_manager import set_mock_mode
 from fingerprint_sensor import FingerprintSensor
 from fingerprint_api import api_message, init_api
 
-# 환경 변수 설정
+# 모드 설정
 USE_MOCK = len(sys.argv) > 1 and sys.argv[1] == "mock"
 set_mock_mode(USE_MOCK)
 
@@ -27,7 +27,6 @@ def main():
 	sensor.start()
 	
 	# UI 표시
-	# ui.show()
 	ui.showFullScreen()
 	
 	sys.exit(app.exec_())

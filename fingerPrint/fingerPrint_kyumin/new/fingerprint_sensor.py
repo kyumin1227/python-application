@@ -37,7 +37,8 @@ class FingerprintSensor(QThread):
 			print("지문 인식기 연결 실패:", e)
 			self.message.emit(str(e))
 
-		self.getFingerList()
+		if not is_mock():
+			self.getFingerList()
 
 	def run(self):
 		"""스레드에서 실행될 메인 로직"""
@@ -50,7 +51,7 @@ class FingerprintSensor(QThread):
 		try:
 			# 센서가 비활성화 상태면 None 반환
 			if not is_sensor_active():
-				return None
+				return
 
 			current_status = get_status()
 			
@@ -61,7 +62,6 @@ class FingerprintSensor(QThread):
 					
 		except Exception as e:
 			self.message.emit(f"지문 스캔 중 오류 발생: {str(e)}")
-			return None
 
 	def register_fingerprint(self):
 		"""지문 등록 처리"""
@@ -111,23 +111,20 @@ class FingerprintSensor(QThread):
 				student_id = self.STUDENT_LIST[result[0]]
 
 				if current_status == Status.CLOSE:
+					# 문 닫기 API 호출
 					close_door(student_id)
 					return
 				
 				# 로그 API 호출
 				log_status(student_id, current_status)
 
-				return
-
-		return None
-
 	def stop(self):
 		"""스레드 종료"""
 		self.running = False
 		self.wait()
 
-	# 키 생성 함수
 	def generate_key(self, password, salt):
+		"""암호화 키 생성"""
 		kdf = PBKDF2HMAC(
 			algorithm=hashes.SHA256(),
 			length=32,
