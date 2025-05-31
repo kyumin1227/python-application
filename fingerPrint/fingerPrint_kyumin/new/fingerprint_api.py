@@ -3,6 +3,7 @@ import requests
 import os
 from PyQt5.QtCore import QObject, pyqtSignal
 from status_manager import is_mock
+import sys
 
 # 전역 변수
 SERVER_URL = "http://210.101.236.158:8081/api/fingerprint"
@@ -18,8 +19,17 @@ def init_api():
 	global SERVER_KEY
 
 	if not is_mock():
-		SERVER_URL = os.getenv("FP_URL")
-		SERVER_KEY = os.getenv("FP_KEY")
+		try:
+			SERVER_URL = os.getenv("FP_URL")
+			SERVER_KEY = os.getenv("FP_KEY")
+
+			if SERVER_URL is None:
+				raise ValueError("FP_URL 환경 변수가 설정되지 않았습니다.")
+			if SERVER_KEY is None:
+				raise ValueError("FP_KEY 환경 변수가 설정되지 않았습니다.")
+		except ValueError as e:
+			print(e)
+			sys.exit(1)
 
 def get_all_fingerprint_data():
 	"""모든 지문 정보를 가져와서 반환"""
@@ -35,6 +45,7 @@ def get_all_fingerprint_data():
 			return []
 	except requests.exceptions as e:
 		api_message.message.emit(f"요청 과정에서 오류 발생\n{str(e)}")
+		return []
 	except Exception as e:
 		api_message.message.emit(f"지문 정보 조회 중 오류 발생\n{str(e)}")
 		return []
@@ -46,7 +57,7 @@ def check_student_registration(student_id: str) -> bool:
 			f"{SERVER_URL}/students/{student_id}",
 			headers={"Authorization": f"Bearer {SERVER_KEY}"}
 		)
-		handle_api_response(response)
+		return handle_api_response(response)
 	except Exception as e:
 		api_message.message.emit(f"학번 검증 중 오류 발생\n{str(e)}")
 		return False
@@ -64,7 +75,7 @@ def register_fingerprint(student_id: str, fp_data1, fp_data2, salt):
 				"salt": salt
             }
 		)
-		handle_api_response(response)
+		return handle_api_response(response)
 	except Exception as e:
 		api_message.message.emit(f"지문 등록 중 오류 발생\n{str(e)}")
 		return False
@@ -79,7 +90,7 @@ def close_door(student_id: str):
 				"closingMember": student_id
 			}
 		)
-		handle_api_response(response)
+		return handle_api_response(response)
 	except Exception as e:
 		api_message.message.emit(f"문 닫기 중 오류 발생\n{str(e)}")
 		return False
@@ -95,7 +106,7 @@ def log_status(student_id: str, status: Status):
 				"action": status.value
 			}
 		)
-		handle_api_response(response)
+		return handle_api_response(response)
 	except Exception as e:
 		api_message.message.emit(f"로그 기록 중 오류 발생\n{str(e)}")
 		return False
@@ -116,3 +127,4 @@ def handle_api_response(response) -> bool:
 		return False
 	except Exception as e:
 		api_message.message.emit(f"오류 발생\n{str(e)}")
+		return False

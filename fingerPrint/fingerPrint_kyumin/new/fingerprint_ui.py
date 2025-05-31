@@ -15,6 +15,18 @@ class FingerprintUI(QMainWindow):
 		ui_path = os.path.join(os.path.dirname(__file__), "new.ui")
 		loadUi(ui_path, self)
 
+		# 메시지 타이머 세팅
+		self.message_timer = QTimer()
+		self.message_timer.timeout.connect(self.clear_message)
+
+		# 시계 타이머 세팅 및 실행
+		self.clock_timer = QTimer(self)
+		self.clock_timer.timeout.connect(self.showTime)
+		self.clock_timer.start(1000)
+
+		# 메시지 초기화
+		self.clear_message()
+
 		# 페이지 버튼 세팅
 		self.page_buttons = [self.fingerprint_button, self.outing_button, self.new_fingerprint_button]
 
@@ -62,14 +74,6 @@ class FingerprintUI(QMainWindow):
 		# 초기 페이지를 출석 페이지로 설정
 		self.fingerprint_button.click()
 
-		# 메시지 타이머 세팅
-		self.message_timer = QTimer()
-		self.message_timer.timeout.connect(self.clear_message)
-
-		# 메시지 초기화 및 시계 실행
-		self.clear_message()
-		self.showTime()
-
 	def changeStdNum(self, num):
 		"""학번 입력 처리"""
 		if num == "back":
@@ -111,10 +115,6 @@ class FingerprintUI(QMainWindow):
 		self.fp_label_date.setText(current_date)
 		self.out_label_date.setText(current_date)
 
-		# 1초 마다 시간 업데이트
-		timer = Timer(1, self.showTime)
-		timer.start()
-
 	def updateButtonState(self, button_status):
 		"""버튼 상태 업데이트 및 색상 강조"""
 		
@@ -135,7 +135,8 @@ class FingerprintUI(QMainWindow):
 		# 지문 등록 이벤트 처리
 		if button_status == Status.REGISTER:
 			clear_student_id()
-			return self.updateButtonState(Status.WAITING)
+			QTimer.singleShot(100, lambda: self.updateButtonState(Status.WAITING))
+			return
 
 	def set_message(self, text: str):
 		"""세 개의 라벨에 동일한 텍스트 설정"""
@@ -147,11 +148,7 @@ class FingerprintUI(QMainWindow):
 
 	def set_info_message(self, text: str):
 		"""세 개의 라벨에 동일한 텍스트 설정"""
-		self.fp_label_text.setText(text)
-		self.out_label_text.setText(text)
-		self.new_label_text.setText(text)
-		# 3초 후에 기본 메시지로 복귀
-		self.message_timer.start(3000)  # 3000ms = 3초
+		self.set_message(text)
 		# 정보 표출 중 지문 센서 비활성화
 		set_sensor_active(False)
 		

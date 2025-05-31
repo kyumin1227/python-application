@@ -8,6 +8,7 @@ from fingerprint_api import get_all_fingerprint_data, check_student_registration
 import time
 import base64
 import os
+import sys
 
 MATCH_THRESHOLD = 50	# 동일 지문 판단 기준
 
@@ -27,7 +28,14 @@ class FingerprintSensor(QThread):
 			self.PASSWORD = "123".encode("utf-8")
 		else:
 			from pyfingerprint.pyfingerprint import PyFingerprint
-			self.PASSWORD = os.getenv("FP_PASSWORD").encode("utf-8")	# 암호화 시 사용하는 비밀번호
+			try:
+				password = os.getenv("FP_PASSWORD")
+				if password is None:
+					raise ValueError("FP_PASSWORD 환경 변수가 설정되지 않았습니다.")
+				self.PASSWORD = password.encode("utf-8")
+			except ValueError as e:
+				print(e)
+				sys.exit(1)
 
 		# 센서 초기화
 		try:
